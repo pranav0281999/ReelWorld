@@ -32,7 +32,7 @@ class World {
         const far = 500;
         const near = 1;
         let camera = new THREE.PerspectiveCamera(fov, aspect, far, near);
-        camera.position.y = 2.5;
+        camera.position.y = 10;
         camera.position.z = 15;
         camera.lookAt(0, 0, 0);
 
@@ -53,8 +53,6 @@ class World {
         let controls = new PlayerControls(camera, user);
         controls.moveSpeed = 1;
         controls.turnSpeed = 0.1;
-        controls.minDistance = 20;
-        controls.maxDistance = 100;
 
         function resizeRendererToDisplaySize(renderer) {
             const canvas = renderer.domElement;
