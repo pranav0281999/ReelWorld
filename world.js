@@ -1,5 +1,6 @@
 import * as THREE from "./lib/three.module.js";
 import {PlayerControls} from "./lib/playerControls.js";
+import {CSS2DRenderer, CSS2DObject} from "./lib/CSS2DRenderer.js";
 
 class World {
     constructor(videoStream) {
@@ -48,9 +49,22 @@ class World {
         let userUpperBodyMesh = new THREE.Mesh(userUpperBodyGeo, userUpperBodyMat);
         userUpperBodyMesh.position.y = 7.5;
 
+        let userBody = new THREE.Object3D();
+        userBody.add(userUpperBodyMesh);
+        userBody.add(userLowerBodyMesh);
+
+        let userLabelDiv = document.createElement( 'div' );
+        userLabelDiv.className = 'label';
+        userLabelDiv.textContent = 'You';
+        userLabelDiv.style.marginTop = '-2em';
+        userLabelDiv.style.color = "white";
+        userLabelDiv.style.fontSize = "2em";
+        const userLabel = new CSS2DObject( userLabelDiv );
+        userLabel.position.set( 0, 11, 0 );
+        userBody.add( userLabel );
+
         let user = new THREE.Group();
-        user.add(userLowerBodyMesh);
-        user.add(userUpperBodyMesh);
+        user.add(userBody);
         user.add(camera);
 
         scene.add(user);
@@ -61,6 +75,13 @@ class World {
         controls.moveSpeed = 1;
         controls.turnSpeed = 0.1;
 
+        //to show labels
+        let labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize( window.innerWidth, window.innerHeight );
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        document.body.appendChild( labelRenderer.domElement );
+
         function resizeRendererToDisplaySize(renderer) {
             const canvas = renderer.domElement;
             const pixelRatio = window.devicePixelRatio;
@@ -70,6 +91,7 @@ class World {
 
             if (needResize) {
                 renderer.setSize(width, height, false);
+                labelRenderer.setSize( width, height );
             }
 
             return needResize;
@@ -85,6 +107,7 @@ class World {
             controls.update();
 
             renderer.render(scene, camera);
+            labelRenderer.render( scene, camera );
 
             setTimeout(function () {
                 requestAnimationFrame(render);
