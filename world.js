@@ -2,8 +2,8 @@ import * as THREE from "./lib/three.module.js";
 import {PlayerControls} from "./lib/playerControls.js";
 
 class World {
-    constructor() {
-        console.log("World Created");
+    constructor(videoStream) {
+        this.localVideoStream = videoStream;
     }
 
     init() {
@@ -37,13 +37,20 @@ class World {
         camera.lookAt(0, 0, 0);
 
         //setting up user
-        const userBodyGeo = new THREE.BoxGeometry(5, 5, 5);
-        const userBodyMat = new THREE.MeshNormalMaterial();
-        let userBodyMesh = new THREE.Mesh(userBodyGeo, userBodyMat);
-        userBodyMesh.position.y = 2.5;
+        const userLowerBodyGeo = new THREE.BoxGeometry(5, 5, 5);
+        const userLowerBodyMat = new THREE.MeshNormalMaterial();
+        let userLowerBodyMesh = new THREE.Mesh(userLowerBodyGeo, userLowerBodyMat);
+        userLowerBodyMesh.position.y = 2.5;
+
+        const userUpperBodyGeo = new THREE.BoxGeometry(5, 5, 5);
+        const userUpperBodyVideoTexture = new THREE.VideoTexture(this.localVideoStream);
+        const userUpperBodyMat = new THREE.MeshBasicMaterial({map: userUpperBodyVideoTexture});
+        let userUpperBodyMesh = new THREE.Mesh(userUpperBodyGeo, userUpperBodyMat);
+        userUpperBodyMesh.position.y = 7.5;
 
         let user = new THREE.Group();
-        user.add(userBodyMesh);
+        user.add(userLowerBodyMesh);
+        user.add(userUpperBodyMesh);
         user.add(camera);
 
         scene.add(user);
