@@ -30,7 +30,7 @@ class World {
         //camera to follow user around
         const fov = 90;
         const aspect = window.innerWidth / window.innerHeight;
-        const far = 500;
+        const far = 283;
         const near = 1;
         let camera = new THREE.PerspectiveCamera(fov, aspect, far, near);
         camera.position.y = 10;
@@ -39,7 +39,7 @@ class World {
 
         //setting up user
         const userLowerBodyGeo = new THREE.BoxGeometry(5, 5, 5);
-        const userLowerBodyMat = new THREE.MeshNormalMaterial();
+        const userLowerBodyMat = new THREE.MeshBasicMaterial();
         let userLowerBodyMesh = new THREE.Mesh(userLowerBodyGeo, userLowerBodyMat);
         userLowerBodyMesh.position.y = 2.5;
 
@@ -72,8 +72,9 @@ class World {
         //setting up movement controls
         //I have not used the main camera here as I didn't like the camera movement provided by the library
         let controls = new PlayerControls(camera, user);
-        controls.moveSpeed = 1;
+        controls.moveSpeed = 2;
         controls.turnSpeed = 0.1;
+        controls.maxDistanceFromCenter = 100;
 
         //to show labels
         let labelRenderer = new CSS2DRenderer();
