@@ -10,6 +10,7 @@ class World {
         this.renderer = new THREE.WebGLRenderer();
         this.controls = new PlayerControls(this.camera, new THREE.Object3D());
         this.labelRenderer = new CSS2DRenderer();
+        this.sharedScreenBoards = [];
     }
 
     init = () => {
@@ -89,6 +90,51 @@ class World {
         document.body.appendChild(this.labelRenderer.domElement);
 
         requestAnimationFrame(this.render);
+    }
+
+    addScreenShare = (video) => {
+        //TODO cannot be more then 4
+        let videoTexture = new THREE.VideoTexture(video);
+
+        let planeMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(50, 50),
+            new THREE.MeshBasicMaterial({map: videoTexture, side: THREE.FrontSide})
+        );
+
+        this.sharedScreenBoards.push(planeMesh);
+
+        const numberOfScreens = this.sharedScreenBoards.length - 1;
+
+        video.onloadeddata = function () {
+            const aspectRatio = video.videoWidth / video.videoHeight;
+            planeMesh.scale.set(1, 1 / aspectRatio, 1);
+
+            planeMesh.position.y = 25 / aspectRatio;
+
+            if (numberOfScreens > 1) {
+                if (numberOfScreens % 2) {
+                    planeMesh.rotation.y = - 0 * Math.PI / 180;
+                    planeMesh.position.z = - 100;
+                } else {
+                    planeMesh.rotation.y = 90 * Math.PI / 180;
+                    planeMesh.position.x = - 100;
+                }
+            } else {
+                if (numberOfScreens % 2) {
+                    planeMesh.rotation.y = 180 * Math.PI / 180;
+                    planeMesh.position.z = 100;
+                } else {
+                    planeMesh.rotation.y = - 90 * Math.PI / 180;
+                    planeMesh.position.x = 100;
+                }
+            }
+        };
+
+        this.scene.add(planeMesh);
+    }
+
+    removeScreenShare = () => {
+        this.scene.remove(this.sharedScreenBoards.pop());
     }
 
     resizeRendererToDisplaySize = () => {

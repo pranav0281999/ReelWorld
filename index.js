@@ -1,14 +1,16 @@
 import {World} from "./world.js";
 
 const startButton = document.getElementById('startButton');
-startButton.addEventListener('click', init);
+const shareScreenButton = document.getElementById("shareScreen");
 
 let world = null;
+
+
+startButton.addEventListener('click', init);
 
 function init() {
     callConnect();
 
-    const shareScreenButton = document.getElementById("shareScreen");
     shareScreenButton.addEventListener('click', shareScreen);
 }
 
@@ -54,9 +56,21 @@ function shareScreen() {
             console.log("Local screen playing");
         });
 
-        world.localVideoStream = mediaStream;
+        world.addScreenShare(video);
+
+        shareScreenButton.textContent = "Stop Sharing";
+        shareScreenButton.removeEventListener('click', shareScreen);
+        shareScreenButton.addEventListener('click', stopSharingScreen);
     }).catch(err => {
         console.error("Error:" + err);
         return null;
     });
+}
+
+function stopSharingScreen() {
+    shareScreenButton.textContent = "Share Screen";
+    shareScreenButton.removeEventListener('click', stopSharingScreen);
+    shareScreenButton.addEventListener('click', shareScreen);
+
+    world.removeScreenShare();
 }
