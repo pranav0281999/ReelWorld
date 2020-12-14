@@ -15,7 +15,7 @@ class World {
 
     init = () => {
         const canvas = document.getElementById("c");
-        this.renderer = new THREE.WebGLRenderer({canvas});
+        this.renderer = new THREE.WebGLRenderer({canvas, logarithmicDepthBuffer: true});
 
         this.scene = new THREE.Scene();
         this.scene.background = 0x000000;
@@ -93,12 +93,12 @@ class World {
     }
 
     addScreenShare = (video) => {
-        //TODO cannot be more then 4
+        //TODO cannot be more than 4
         let videoTexture = new THREE.VideoTexture(video);
 
         let planeMesh = new THREE.Mesh(
             new THREE.PlaneGeometry(50, 50),
-            new THREE.MeshBasicMaterial({map: videoTexture, side: THREE.FrontSide})
+            new THREE.MeshBasicMaterial({map: videoTexture})
         );
 
         this.sharedScreenBoards.push(planeMesh);

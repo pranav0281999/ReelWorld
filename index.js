@@ -23,7 +23,9 @@ function callConnect() {
     let localMediaStream = navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
-            aspectRatio: 1
+            frameRate: 10,
+            width: 1280,
+            height: 720
         }
     }).then((mediaStream) => {
         let video = document.createElement('video');
@@ -46,7 +48,11 @@ function callDisconnect() {
 
 function shareScreen() {
     let screenStream = navigator.mediaDevices.getDisplayMedia({
-        video: true,
+        video: {
+            frameRate: 10,
+            width: 1280,
+            height: 720
+        },
         audio: true
     }).then((mediaStream) => {
         let video = document.createElement('video');
