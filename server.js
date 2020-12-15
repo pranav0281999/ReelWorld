@@ -1,9 +1,12 @@
 const express = require('express');
 const app = express();
 
+const http = require('http').createServer(app);
+
 const port = 8000;
 
-const server = app.listen(port);
-console.log('Server is running localhost on port: ' + port);
-
 app.use(express.static('public'));
+
+http.listen(port, () => {
+    console.log('listening on *:8000');
+});
