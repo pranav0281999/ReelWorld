@@ -1,17 +1,33 @@
 import {World} from "./world.js";
+import {io} from "socket.io-client";
 
 const startButton = document.getElementById('startButton');
 const shareScreenButton = document.getElementById("shareScreen");
 
 let world = null;
 
+let socket;
 
 startButton.addEventListener('click', init);
 
 function init() {
-    callConnect();
+    startButton.textContent = "Joining...";
 
-    shareScreenButton.addEventListener('click', shareScreen);
+    socket = io();
+
+    socket.on("connect", () => {
+        startButton.textContent = "Join";
+
+        console.log("Connected to server");
+
+        callConnect();
+
+        shareScreenButton.addEventListener('click', shareScreen);
+
+        socket.on("disconnect", () => {
+            console.log("Disconnected from server");
+        });
+    });
 }
 
 function callConnect() {
