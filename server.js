@@ -18,6 +18,16 @@ http.listen(port, () => {
 io.on("connection", client => {
     console.log("Client connected: " + client.id);
 
+    client.emit("server_ack", {msg: "Acknowledgement from server"});
+
+    client.on("client_ack", data => {
+        console.log(data.msg + " " + client.id);
+    });
+
+    client.on("client_transformation", data => {
+        console.log(data);
+    })
+
     client.on("disconnect", (reason) => {
         console.log("Client disconnected: " + client.id + " for reason: " + reason);
     });

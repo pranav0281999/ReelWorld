@@ -27,12 +27,25 @@ function init() {
 
         shareScreenButton.addEventListener('click', shareScreen);
         disconnectCallButton.addEventListener('click', disconnectCall);
+
+        socket.emit("client_ack", {msg: "Acknowledgment from client"});
+    });
+
+    socket.on("server_ack", data => {
+        console.log(data.msg);
     });
 
     socket.on("disconnect", () => {
         console.log("Disconnected from server");
 
         handleCallDisconnect();
+    });
+}
+
+function sendUserPosition() {
+    socket.emit("client_transformation", {
+        userPosition: [world.user.position.x, world.user.position.x, world.user.position.z],
+        userRotation: [world.user.quaternion.x, world.user.quaternion.y, world.user.quaternion.z, world.user.quaternion.w]
     });
 }
 
@@ -58,7 +71,7 @@ function callConnect() {
             console.log("Local video playing");
         });
 
-        world = new World(video);
+        world = new World(video, sendUserPosition);
         world.init();
     });
 }

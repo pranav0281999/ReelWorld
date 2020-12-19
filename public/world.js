@@ -4,7 +4,7 @@ import {CSS2DRenderer, CSS2DObject} from "./lib/CSS2DRenderer.js";
 import {ResourceTracker} from "./threejsResourceTracker";
 
 class World {
-    constructor(videoStream) {
+    constructor(videoStream, sendUserPositionFunc) {
         this.localVideoStream = videoStream;
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera();
@@ -14,6 +14,10 @@ class World {
         this.sharedScreenBoards = [];
         this.resourseTracker = new ResourceTracker();
         this.frameTimer = null;
+        this.user = new THREE.Group();
+        this.position = new THREE.Vector3();
+        this.rotation = new THREE.Quaternion();
+        this.sendUserPosition = sendUserPositionFunc;
     }
 
     init = () => {
@@ -72,15 +76,15 @@ class World {
         userLabel.position.set(0, 11, 0);
         userBody.add(userLabel);
 
-        let user = this.resourseTracker.track(new THREE.Group());
-        user.add(userBody);
-        user.add(this.camera);
+        this.user = this.resourseTracker.track(new THREE.Group());
+        this.user.add(userBody);
+        this.user.add(this.camera);
 
-        this.scene.add(user);
+        this.scene.add(this.user);
 
         //setting up movement controls
         //I have not used the main camera here as I didn't like the camera movement provided by the library
-        this.controls = new PlayerControls(this.camera, user);
+        this.controls = new PlayerControls(this.camera, this.user);
         this.controls.moveSpeed = 2;
         this.controls.turnSpeed = 0.1;
         this.controls.maxDistanceFromCenter = 100;
@@ -160,6 +164,20 @@ class World {
     }
 
     render = (time) => {
+        let distance = this.position.distanceTo(this.user.position);
+
+        if (distance > 1) {
+            this.position.copy(this.user.position);
+            this.sendUserPosition();
+        }
+
+        let rotation = this.user.quaternion.angleTo(this.rotation) * 180 / Math.PI;
+
+        if (rotation > 2) {
+            this.rotation.copy(this.user.quaternion)
+            this.sendUserPosition();
+        }
+
         if (this.resizeRendererToDisplaySize()) {
             const canvas = this.renderer.domElement;
             this.camera.aspect = canvas.clientWidth / canvas.clientHeight;
