@@ -1,6 +1,7 @@
 import * as THREE from "./lib/three.module.js";
 import {PlayerControls} from "./lib/playerControls.js";
 import {CSS2DRenderer, CSS2DObject} from "./lib/CSS2DRenderer.js";
+import {ResourceTracker} from "./threejsResourceTracker";
 
 class World {
     constructor(videoStream) {
@@ -11,6 +12,8 @@ class World {
         this.controls = new PlayerControls(this.camera, new THREE.Object3D());
         this.labelRenderer = new CSS2DRenderer();
         this.sharedScreenBoards = [];
+        this.resourseTracker = new ResourceTracker();
+        this.frameTimer = null;
     }
 
     init = () => {
@@ -21,16 +24,16 @@ class World {
         this.scene.background = 0x000000;
 
         //ambient light to reduce computations and keep everything visible
-        const ambientLight = new THREE.AmbientLight(0xFFFFFF, 1);
+        const ambientLight = this.resourseTracker.track(new THREE.AmbientLight(0xFFFFFF, 1));
         this.scene.add(ambientLight);
 
         //setting this so that center is known
-        const axesHelper = new THREE.AxesHelper(5);
+        const axesHelper = this.resourseTracker.track(new THREE.AxesHelper(5));
         axesHelper.position.y = 1;
         this.scene.add(axesHelper);
 
         //setting the stage
-        let gridHelper = new THREE.GridHelper(200, 20);
+        let gridHelper = this.resourseTracker.track(new THREE.GridHelper(200, 20));
         this.scene.add(gridHelper);
 
         //camera to follow user around
@@ -69,7 +72,7 @@ class World {
         userLabel.position.set(0, 11, 0);
         userBody.add(userLabel);
 
-        let user = new THREE.Group();
+        let user = this.resourseTracker.track(new THREE.Group());
         user.add(userBody);
         user.add(this.camera);
 
@@ -96,10 +99,10 @@ class World {
         //TODO cannot be more than 4
         let videoTexture = new THREE.VideoTexture(video);
 
-        let planeMesh = new THREE.Mesh(
+        let planeMesh = this.resourseTracker.track(new THREE.Mesh(
             new THREE.PlaneGeometry(50, 50),
             new THREE.MeshBasicMaterial({map: videoTexture})
-        );
+        ));
 
         this.sharedScreenBoards.push(planeMesh);
 
@@ -113,18 +116,18 @@ class World {
 
             if (numberOfScreens > 1) {
                 if (numberOfScreens % 2) {
-                    planeMesh.rotation.y = - 0 * Math.PI / 180;
-                    planeMesh.position.z = - 100;
+                    planeMesh.rotation.y = -0 * Math.PI / 180;
+                    planeMesh.position.z = -100;
                 } else {
                     planeMesh.rotation.y = 90 * Math.PI / 180;
-                    planeMesh.position.x = - 100;
+                    planeMesh.position.x = -100;
                 }
             } else {
                 if (numberOfScreens % 2) {
                     planeMesh.rotation.y = 180 * Math.PI / 180;
                     planeMesh.position.z = 100;
                 } else {
-                    planeMesh.rotation.y = - 90 * Math.PI / 180;
+                    planeMesh.rotation.y = -90 * Math.PI / 180;
                     planeMesh.position.x = 100;
                 }
             }
@@ -134,7 +137,11 @@ class World {
     }
 
     removeScreenShare = () => {
-        this.scene.remove(this.sharedScreenBoards.pop());
+        let screenBoard = this.sharedScreenBoards.pop();
+
+        if (screenBoard) {
+            this.scene.remove(screenBoard);
+        }
     }
 
     resizeRendererToDisplaySize = () => {
@@ -164,10 +171,33 @@ class World {
         this.renderer.render(this.scene, this.camera);
         this.labelRenderer.render(this.scene, this.camera);
 
-        setTimeout(() => {
+        this.frameTimer = setTimeout(() => {
             requestAnimationFrame(this.render);
         }, 1000 / 30);
     }
+
+    endWorld = () => {
+        if (this.frameTimer) {
+            clearTimeout(this.frameTimer);
+        }
+
+        this.resourseTracker.dispose();
+        this.resourseTracker = null;
+        // this.scene.dispose();
+        this.scene = null;
+        this.renderer.dispose();
+        this.renderer = null;
+
+        this.camera = null;
+        this.controls = null;
+        this.labelRenderer = null;
+        this.sharedScreenBoards = null;
+
+        document.getElementById("c").remove();
+        let newCanvas = document.createElement("canvas");
+        newCanvas.id = "c"
+        document.body.appendChild(newCanvas);
+    }
 }
 
-export {World}
+export {World};

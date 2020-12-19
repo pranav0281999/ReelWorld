@@ -3,6 +3,7 @@ import {io} from "socket.io-client";
 
 const startButton = document.getElementById('startButton');
 const shareScreenButton = document.getElementById("shareScreen");
+const disconnectCallButton = document.getElementById("disconnectCall");
 
 let world = null;
 
@@ -23,10 +24,13 @@ function init() {
         callConnect();
 
         shareScreenButton.addEventListener('click', shareScreen);
+        disconnectCallButton.addEventListener('click', disconnectCall);
+    });
 
-        socket.on("disconnect", () => {
-            console.log("Disconnected from server");
-        });
+    socket.on("disconnect", () => {
+        console.log("Disconnected from server");
+        
+        handleCallDisconnect();
     });
 }
 
@@ -56,10 +60,17 @@ function callConnect() {
     });
 }
 
-function callDisconnect() {
+function disconnectCall() {
+    socket.disconnect();
+}
+
+function handleCallDisconnect() {
     //remove the call options as no longer needed, show overlay
+    stopSharingScreen();
     document.getElementById("conferenceOptions").style.display = "none";
-    document.getElementById("overlay").style.display = "block";
+    document.getElementById("overlay").style.display = "flex";
+    world.endWorld();
+    world = null;
 }
 
 function shareScreen() {
