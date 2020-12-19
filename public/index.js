@@ -11,6 +11,8 @@ let socket;
 
 let mediaStream, screenStream;
 
+let selfSocketId = null;
+
 startButton.addEventListener('click', init);
 
 function init() {
@@ -23,8 +25,6 @@ function init() {
 
         console.log("Connected to server");
 
-        callConnect();
-
         shareScreenButton.addEventListener('click', shareScreen);
         disconnectCallButton.addEventListener('click', disconnectCall);
     });
@@ -33,28 +33,46 @@ function init() {
         console.log("Disconnected from server");
 
         handleCallDisconnect();
+
+        selfSocketId = null;
     });
 
     socket.on("initial_state", (data) => {
-        console.log(data);
+        console.log("initial_state");
+
+        selfSocketId = data.clientId;
+
+        callConnect();
     });
 
     socket.on("client_transformation", (data) => {
-        console.log(data);
+        console.log("client_transformation");
+
+        if (selfSocketId !== data.clientId) {
+            world.updateClient(data.clientId, data.position, data.rotation);
+        }
     });
 
     socket.on("client_new", (data) => {
-        console.log(data);
+        console.log("client_new");
+
+        if (selfSocketId !== data.clientId) {
+            world.addClient(data.clientId);
+        }
     });
 
     socket.on("client_exit", (data) => {
-        console.log(data);
+        console.log("client_exit");
+
+        if (selfSocketId !== data.clientId) {
+            world.removeClient(data.clientId);
+        }
     });
 }
 
 function sendUserPosition() {
     socket.emit("client_transformation", {
-        position: [world.user.position.x, world.user.position.x, world.user.position.z],
+        position: [world.user.position.x, world.user.position.y, world.user.position.z],
         rotation: [world.user.quaternion.x, world.user.quaternion.y, world.user.quaternion.z, world.user.quaternion.w]
     });
 }

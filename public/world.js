@@ -18,6 +18,7 @@ class World {
         this.position = new THREE.Vector3();
         this.rotation = new THREE.Quaternion();
         this.sendUserPosition = sendUserPositionFunc;
+        this.clients = {};
     }
 
     init = () => {
@@ -138,6 +139,50 @@ class World {
         };
 
         this.scene.add(planeMesh);
+    }
+
+    addClient = (clientId) => {
+        //setting up client
+        const clientLowerBodyGeo = new THREE.BoxGeometry(5, 5, 5);
+        const clientLowerBodyMat = new THREE.MeshBasicMaterial();
+        let clientLowerBodyMesh = new THREE.Mesh(clientLowerBodyGeo, clientLowerBodyMat);
+        clientLowerBodyMesh.position.y = 2.5;
+
+        const clientUpperBodyGeo = new THREE.BoxGeometry(5, 5, 5);
+        const clientUpperBodyMat = new THREE.MeshNormalMaterial();
+        let clientUpperBodyMesh = new THREE.Mesh(clientUpperBodyGeo, clientUpperBodyMat);
+        clientUpperBodyMesh.position.y = 7.5;
+
+        let clientBody = new THREE.Object3D();
+        clientBody.add(clientUpperBodyMesh);
+        clientBody.add(clientLowerBodyMesh);
+
+        let clientLabelDiv = document.createElement('div');
+        clientLabelDiv.className = 'label';
+        clientLabelDiv.textContent = 'Other';
+        clientLabelDiv.style.marginTop = '-2em';
+        clientLabelDiv.style.color = "white";
+        clientLabelDiv.style.fontSize = "2em";
+        const clientLabel = new CSS2DObject(clientLabelDiv);
+        clientLabel.position.set(0, 11, 0);
+        clientBody.add(clientLabel);
+
+        let client = this.resourseTracker.track(new THREE.Group());
+        client.add(clientBody);
+
+        this.clients[clientId] = client;
+
+        this.scene.add(client);
+    }
+
+    removeClient = (clientId) => {
+        this.scene.remove(this.clients[clientId]);
+        delete this.clients[clientId];
+    }
+
+    updateClient = (clientId, position, rotation) => {
+        this.clients[clientId].position.set(...position);
+        this.clients[clientId].quaternion.set(...rotation);
     }
 
     removeScreenShare = () => {

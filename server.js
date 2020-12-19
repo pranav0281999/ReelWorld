@@ -23,12 +23,12 @@ io.on("connection", client => {
         rotation: [0, 0, 0, 1]
     };
 
-    io.sockets.emit("client_new", {clientId: client.id});
-
     client.emit("initial_state", {
-        id: client.id,
+        clientId: client.id,
         clients: clients
     });
+
+    io.sockets.emit("client_new", {clientId: client.id});
 
     console.log("Client connected: " + client.id);
 
@@ -36,7 +36,9 @@ io.on("connection", client => {
         clients[client.id] = data;
 
         io.sockets.emit("client_transformation", {
-            clients: clients
+            clientId: client.id,
+            position: clients[client.id].position,
+            rotation: clients[client.id].rotation,
         });
     })
 
