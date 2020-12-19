@@ -9,6 +9,8 @@ let world = null;
 
 let socket;
 
+let mediaStream, screenStream;
+
 startButton.addEventListener('click', init);
 
 function init() {
@@ -29,7 +31,7 @@ function init() {
 
     socket.on("disconnect", () => {
         console.log("Disconnected from server");
-        
+
         handleCallDisconnect();
     });
 }
@@ -47,9 +49,10 @@ function callConnect() {
             width: 1280,
             height: 720
         }
-    }).then((mediaStream) => {
+    }).then((stream) => {
+        mediaStream = stream;
         let video = document.createElement('video');
-        video.srcObject = mediaStream;
+        video.srcObject = stream;
         video.id = "local_video";
         video.play().then(() => {
             console.log("Local video playing");
@@ -71,19 +74,34 @@ function handleCallDisconnect() {
     document.getElementById("overlay").style.display = "flex";
     world.endWorld();
     world = null;
+
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => {
+            track.stop();
+        });
+        mediaStream = null;
+    }
+
+    if (screenStream) {
+        screenStream.getTracks().forEach(track => {
+            track.stop();
+        });
+        screenStream = null;
+    }
 }
 
 function shareScreen() {
-    let screenStream = navigator.mediaDevices.getDisplayMedia({
+    let localScreenStream = navigator.mediaDevices.getDisplayMedia({
         video: {
             frameRate: 10,
             width: 1280,
             height: 720
         },
         audio: true
-    }).then((mediaStream) => {
+    }).then((stream) => {
+        screenStream = stream;
         let video = document.createElement('video');
-        video.srcObject = mediaStream;
+        video.srcObject = stream;
         video.id = "local_video";
         video.play().then(() => {
             console.log("Local screen playing");
