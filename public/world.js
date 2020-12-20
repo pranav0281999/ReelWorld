@@ -2,10 +2,10 @@ import * as THREE from "./lib/three.module.js";
 import {PlayerControls} from "./lib/playerControls.js";
 import {CSS2DRenderer, CSS2DObject} from "./lib/CSS2DRenderer.js";
 import {ResourceTracker} from "./threejsResourceTracker";
+import {PositionalAudioHelper} from "../../../examples/jsm/helpers/PositionalAudioHelper";
 
 class World {
     constructor(sendUserPositionCallback) {
-        this.localVideoStream = null;
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera();
         this.renderer = new THREE.WebGLRenderer();
@@ -20,6 +20,8 @@ class World {
         this.rotation = new THREE.Quaternion();
         this.sendUserPosition = sendUserPositionCallback;
         this.clients = {};
+        this.audioListener = new THREE.AudioListener();
+        this.userAudio = null;
     }
 
     init = () => {
@@ -68,6 +70,7 @@ class World {
         let userBody = new THREE.Object3D();
         userBody.add(userUpperBodyMesh);
         userBody.add(userLowerBodyMesh);
+        userBody.add(this.audioListener);
 
         let userLabelDiv = document.createElement('div');
         userLabelDiv.className = 'label';
@@ -200,13 +203,27 @@ class World {
         this.userHeadMesh.material = new THREE.MeshBasicMaterial({map: videoTexture});
     }
 
-    addAudioForUser = (video) => {
-        const videoTexture = new THREE.VideoTexture(video);
-        this.userHeadMesh.material = new THREE.MeshBasicMaterial({map: videoTexture});
+    addAudioForUser = (stream) => {
+        this.userAudio = new THREE.PositionalAudio(this.audioListener);
+        this.userAudio.position.set(0, 0, 0);
+
+        this.userAudio.setMediaStreamSource(stream);
+        this.userAudio.setRefDistance(1);
+        this.userAudio.setMaxDistance(200);
+        this.userAudio.play();
+
+        this.scene.add(this.userAudio);
     }
 
-    removeStreamForUser = () => {
+    removeVideoStreamForUser = () => {
         this.userHeadMesh.material = new THREE.MeshNormalMaterial();
+    }
+
+    removeAudioStreamForUser = () => {
+        if (this.userAudio) {
+            this.scene.remove(this.userAudio);
+            this.userAudio = null;
+        }
     }
 
     resizeRendererToDisplaySize = () => {

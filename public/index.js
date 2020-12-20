@@ -11,12 +11,12 @@ let world = null;
 
 let socket;
 
-let mediaStream, screenStream;
+let videoStream, audioStream, screenStream;
 
 let selfSocketId = null;
 
 let audioEnabled = false, videoEnabled = false;
-let currentStreamVideo = null;
+let currentVideoElement = null;
 
 startButton.addEventListener('click', init);
 
@@ -104,98 +104,57 @@ function callConnect() {
 
 function toggleAudio() {
     if (audioEnabled) {
-        const audioTrack = mediaStream.getAudioTracks();
-        mediaStream.removeTrack(audioTrack[0]);
+        audioStream.getTracks().forEach(track => {
+            track.stop();
+            audioStream.removeTrack(track);
+        })
         audioEnabled = false;
 
-        if (!videoEnabled) {
-            world.removeStreamForUser();
-
-            if (currentStreamVideo) {
-                currentStreamVideo.pause();
-            }
-            currentStreamVideo = null;
-        }
+        world.removeAudioStreamForUser();
     } else {
-        let constraints;
-
-        if (videoEnabled) {
-            constraints = {
-                audio: true,
-                video: {
-                    frameRate: 10,
-                    width: 1280,
-                    height: 720
-                }
-            };
-        } else {
-            constraints = {
-                audio: true
-            };
-        }
+        let constraints = {
+            audio: true
+        };
 
         let localMediaStream = navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
             audioEnabled = true;
 
-            mediaStream = stream;
-            let video = document.createElement('video');
-            video.srcObject = stream;
-            video.id = "local_video";
-            video.play().then(() => {
-                console.log("Local video playing");
-            });
+            audioStream = stream;
 
-            if (currentStreamVideo) {
-                currentStreamVideo.pause();
-            }
-            currentStreamVideo = video;
-
-            world.addVideoForUser(video);
+            world.addAudioForUser(stream);
         });
     }
 }
 
 function toggleVideo() {
     if (videoEnabled) {
-        const videoTrack = mediaStream.getVideoTracks();
-        mediaStream.removeTrack(videoTrack[0]);
+        videoStream.getTracks().forEach(track => {
+            track.stop();
+            videoStream.removeTrack(track);
+        })
+
         videoEnabled = false;
 
-        if (!audioEnabled) {
-            world.removeStreamForUser();
+        world.removeVideoStreamForUser();
 
-            if (currentStreamVideo) {
-                currentStreamVideo.pause();
-            }
-            currentStreamVideo = null;
+        if (currentVideoElement) {
+            currentVideoElement.pause();
         }
+        currentVideoElement = null;
     } else {
-        let constraints;
-
-        if (audioEnabled) {
-            constraints = {
-                audio: true,
-                video: {
-                    frameRate: 10,
-                    width: 1280,
-                    height: 720
-                }
-            };
-        } else {
-            constraints = {
-                audio: false,
-                video: {
-                    frameRate: 10,
-                    width: 1280,
-                    height: 720
-                }
-            };
-        }
+        let constraints = {
+            audio: false,
+            video: {
+                frameRate: 10,
+                width: 1280,
+                height: 720
+            }
+        };
 
         let localMediaStream = navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
             videoEnabled = true;
 
-            mediaStream = stream;
+            videoStream = stream;
             let video = document.createElement('video');
             video.srcObject = stream;
             video.id = "local_video";
@@ -203,10 +162,10 @@ function toggleVideo() {
                 console.log("Local video playing");
             });
 
-            if (currentStreamVideo) {
-                currentStreamVideo.pause();
+            if (currentVideoElement) {
+                currentVideoElement.pause();
             }
-            currentStreamVideo = video;
+            currentVideoElement = video;
 
             world.addVideoForUser(video);
         });
@@ -226,11 +185,11 @@ function handleCallDisconnect() {
     world.endWorld();
     world = null;
 
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(track => {
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => {
             track.stop();
         });
-        mediaStream = null;
+        videoStream = null;
     }
 
     videoEnabled = false;
