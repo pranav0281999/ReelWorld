@@ -4,8 +4,8 @@ import {CSS2DRenderer, CSS2DObject} from "./lib/CSS2DRenderer.js";
 import {ResourceTracker} from "./threejsResourceTracker";
 
 class World {
-    constructor(videoStream, sendUserPositionFunc) {
-        this.localVideoStream = videoStream;
+    constructor(sendUserPositionCallback) {
+        this.localVideoStream = null;
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera();
         this.renderer = new THREE.WebGLRenderer();
@@ -17,7 +17,7 @@ class World {
         this.user = new THREE.Group();
         this.position = new THREE.Vector3();
         this.rotation = new THREE.Quaternion();
-        this.sendUserPosition = sendUserPositionFunc;
+        this.sendUserPosition = sendUserPositionCallback;
         this.clients = {};
     }
 
@@ -58,8 +58,7 @@ class World {
         userLowerBodyMesh.position.y = 2.5;
 
         const userUpperBodyGeo = new THREE.BoxGeometry(5, 5, 5);
-        const userUpperBodyVideoTexture = new THREE.VideoTexture(this.localVideoStream);
-        const userUpperBodyMat = new THREE.MeshBasicMaterial({map: userUpperBodyVideoTexture});
+        const userUpperBodyMat = new THREE.MeshNormalMaterial();
         let userUpperBodyMesh = new THREE.Mesh(userUpperBodyGeo, userUpperBodyMat);
         userUpperBodyMesh.position.y = 7.5;
 

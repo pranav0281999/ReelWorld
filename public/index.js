@@ -4,6 +4,8 @@ import {io} from "socket.io-client";
 const startButton = document.getElementById('startButton');
 const shareScreenButton = document.getElementById("shareScreen");
 const disconnectCallButton = document.getElementById("disconnectCall");
+const toggleAudioButton = document.getElementById("toggleAudio");
+const toggleVideoButton = document.getElementById("toggleVideo");
 
 let world = null;
 
@@ -25,8 +27,7 @@ function init() {
 
         console.log("Connected to server");
 
-        shareScreenButton.addEventListener('click', shareScreen);
-        disconnectCallButton.addEventListener('click', disconnectCall);
+        callConnect();
     });
 
     socket.on("disconnect", () => {
@@ -42,7 +43,14 @@ function init() {
 
         selfSocketId = data.clientId;
 
-        callConnect();
+        Object.keys(data.clients).forEach(function (key) {
+            if (key !== selfSocketId) {
+                if (data.clients[key]) {
+                    world.addClient(key);
+                    world.updateClient(key, data.clients[key].position, data.clients[key].rotation);
+                }
+            }
+        });
     });
 
     socket.on("client_transformation", (data) => {
@@ -78,30 +86,25 @@ function sendUserPosition() {
 }
 
 function callConnect() {
-    //remove the overlay as no longer needed, show call options
     document.getElementById("overlay").style.display = "none";
     document.getElementById("conferenceOptions").style.display = "flex";
+    document.getElementById("streamOptions").style.display = "flex";
 
-    //get local media stream, create the world and pass on stream
-    let localMediaStream = navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-            frameRate: 10,
-            width: 1280,
-            height: 720
-        }
-    }).then((stream) => {
-        mediaStream = stream;
-        let video = document.createElement('video');
-        video.srcObject = stream;
-        video.id = "local_video";
-        video.play().then(() => {
-            console.log("Local video playing");
-        });
+    world = new World(sendUserPosition);
+    world.init();
 
-        world = new World(video, sendUserPosition);
-        world.init();
-    });
+    shareScreenButton.addEventListener('click', shareScreen);
+    disconnectCallButton.addEventListener('click', disconnectCall);
+    toggleAudioButton.addEventListener('click', toggleAudio);
+    toggleVideoButton.addEventListener('click', toggleVideo);
+}
+
+function toggleAudio() {
+    console.log("Toggle Audio");
+}
+
+function toggleVideo() {
+    console.log("Toggle Video");
 }
 
 function disconnectCall() {
@@ -112,6 +115,7 @@ function handleCallDisconnect() {
     //remove the call options as no longer needed, show overlay
     stopSharingScreen();
     document.getElementById("conferenceOptions").style.display = "none";
+    document.getElementById("streamOptions").style.display = "none";
     document.getElementById("overlay").style.display = "flex";
     world.endWorld();
     world = null;
@@ -129,6 +133,12 @@ function handleCallDisconnect() {
         });
         screenStream = null;
     }
+
+    shareScreenButton.removeEventListener('click', shareScreen);
+    shareScreenButton.removeEventListener('click', stopSharingScreen);
+    disconnectCallButton.removeEventListener('click', disconnectCall);
+    toggleAudioButton.removeEventListener('click', toggleAudio);
+    toggleVideoButton.removeEventListener('click', toggleVideo);
 }
 
 function shareScreen() {
