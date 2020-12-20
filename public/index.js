@@ -103,11 +103,13 @@ function callConnect() {
 }
 
 function toggleAudio() {
-    if (audioEnabled) {
+    if (audioEnabled && audioStream) {
         audioStream.getTracks().forEach(track => {
             track.stop();
             audioStream.removeTrack(track);
-        })
+        });
+        audioStream = null;
+
         audioEnabled = false;
 
         world.removeAudioStreamForUser();
@@ -127,11 +129,13 @@ function toggleAudio() {
 }
 
 function toggleVideo() {
-    if (videoEnabled) {
+    if (videoEnabled && videoStream) {
         videoStream.getTracks().forEach(track => {
             track.stop();
             videoStream.removeTrack(track);
-        })
+        });
+
+        videoStream = null;
 
         videoEnabled = false;
 
@@ -182,6 +186,7 @@ function handleCallDisconnect() {
     document.getElementById("conferenceOptions").style.display = "none";
     document.getElementById("streamOptions").style.display = "none";
     document.getElementById("overlay").style.display = "flex";
+
     world.endWorld();
     world = null;
 
@@ -190,6 +195,13 @@ function handleCallDisconnect() {
             track.stop();
         });
         videoStream = null;
+    }
+
+    if (audioStream) {
+        audioStream.getTracks().forEach(track => {
+            track.stop();
+        });
+        audioStream = null;
     }
 
     videoEnabled = false;

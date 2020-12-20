@@ -181,13 +181,17 @@ class World {
     }
 
     removeClient = (clientId) => {
-        this.scene.remove(this.clients[clientId]);
-        delete this.clients[clientId];
+        if (this.clients[clientId]) {
+            this.scene.remove(this.clients[clientId]);
+            delete this.clients[clientId];
+        }
     }
 
     updateClient = (clientId, position, rotation) => {
-        this.clients[clientId].position.set(...position);
-        this.clients[clientId].quaternion.set(...rotation);
+        if (this.clients[clientId]) {
+            this.clients[clientId].position.set(...position);
+            this.clients[clientId].quaternion.set(...rotation);
+        }
     }
 
     removeScreenShare = () => {
@@ -242,37 +246,49 @@ class World {
     }
 
     render = (time) => {
-        let distance = this.position.distanceTo(this.user.position);
+        try {
+            let distance = this.position.distanceTo(this.user.position);
 
-        if (distance > 1) {
-            this.position.copy(this.user.position);
-            this.sendUserPosition();
+            if (distance > 1) {
+                this.position.copy(this.user.position);
+                this.sendUserPosition();
+            }
+
+            let rotation = this.user.quaternion.angleTo(this.rotation) * 180 / Math.PI;
+
+            if (rotation > 2) {
+                this.rotation.copy(this.user.quaternion)
+                this.sendUserPosition();
+            }
+
+            if (this.resizeRendererToDisplaySize()) {
+                const canvas = this.renderer.domElement;
+                this.camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                this.camera.updateProjectionMatrix();
+            }
+
+            this.controls.update();
+
+            this.renderer.render(this.scene, this.camera);
+            this.labelRenderer.render(this.scene, this.camera);
+
+            this.frameTimer = setTimeout(() => {
+                requestAnimationFrame(this.render);
+            }, 1000 / 30);
+        } catch (e) {
+            console.error(e);
         }
-
-        let rotation = this.user.quaternion.angleTo(this.rotation) * 180 / Math.PI;
-
-        if (rotation > 2) {
-            this.rotation.copy(this.user.quaternion)
-            this.sendUserPosition();
-        }
-
-        if (this.resizeRendererToDisplaySize()) {
-            const canvas = this.renderer.domElement;
-            this.camera.aspect = canvas.clientWidth / canvas.clientHeight;
-            this.camera.updateProjectionMatrix();
-        }
-
-        this.controls.update();
-
-        this.renderer.render(this.scene, this.camera);
-        this.labelRenderer.render(this.scene, this.camera);
-
-        this.frameTimer = setTimeout(() => {
-            requestAnimationFrame(this.render);
-        }, 1000 / 30);
     }
 
     endWorld = () => {
+        this.removeVideoStreamForUser();
+        this.removeAudioStreamForUser();
+        this.removeScreenShare();
+
+        Object.keys(this.clients).forEach((key) => {
+            this.removeClient(key);
+        });
+
         if (this.frameTimer) {
             clearTimeout(this.frameTimer);
         }
@@ -288,6 +304,13 @@ class World {
         this.controls = null;
         this.labelRenderer = null;
         this.sharedScreenBoards = null;
+
+        this.position = null;
+        this.rotation = null;
+        this.sendUserPosition = null;
+        this.clients = null;
+        this.audioListener = null;
+        this.userAudio = null;
 
         document.getElementById("c").remove();
         let newCanvas = document.createElement("canvas");
