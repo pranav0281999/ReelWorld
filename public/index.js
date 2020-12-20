@@ -15,6 +15,9 @@ let mediaStream, screenStream;
 
 let selfSocketId = null;
 
+let audioEnabled = false, videoEnabled = false;
+let currentStreamVideo = null;
+
 startButton.addEventListener('click', init);
 
 function init() {
@@ -100,11 +103,114 @@ function callConnect() {
 }
 
 function toggleAudio() {
-    console.log("Toggle Audio");
+    if (audioEnabled) {
+        const audioTrack = mediaStream.getAudioTracks();
+        mediaStream.removeTrack(audioTrack[0]);
+        audioEnabled = false;
+
+        if (!videoEnabled) {
+            world.removeStreamForUser();
+
+            if (currentStreamVideo) {
+                currentStreamVideo.pause();
+            }
+            currentStreamVideo = null;
+        }
+    } else {
+        let constraints;
+
+        if (videoEnabled) {
+            constraints = {
+                audio: true,
+                video: {
+                    frameRate: 10,
+                    width: 1280,
+                    height: 720
+                }
+            };
+        } else {
+            constraints = {
+                audio: true
+            };
+        }
+
+        let localMediaStream = navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+            audioEnabled = true;
+
+            mediaStream = stream;
+            let video = document.createElement('video');
+            video.srcObject = stream;
+            video.id = "local_video";
+            video.play().then(() => {
+                console.log("Local video playing");
+            });
+
+            if (currentStreamVideo) {
+                currentStreamVideo.pause();
+            }
+            currentStreamVideo = video;
+
+            world.addVideoForUser(video);
+        });
+    }
 }
 
 function toggleVideo() {
-    console.log("Toggle Video");
+    if (videoEnabled) {
+        const videoTrack = mediaStream.getVideoTracks();
+        mediaStream.removeTrack(videoTrack[0]);
+        videoEnabled = false;
+
+        if (!audioEnabled) {
+            world.removeStreamForUser();
+
+            if (currentStreamVideo) {
+                currentStreamVideo.pause();
+            }
+            currentStreamVideo = null;
+        }
+    } else {
+        let constraints;
+
+        if (audioEnabled) {
+            constraints = {
+                audio: true,
+                video: {
+                    frameRate: 10,
+                    width: 1280,
+                    height: 720
+                }
+            };
+        } else {
+            constraints = {
+                audio: false,
+                video: {
+                    frameRate: 10,
+                    width: 1280,
+                    height: 720
+                }
+            };
+        }
+
+        let localMediaStream = navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+            videoEnabled = true;
+
+            mediaStream = stream;
+            let video = document.createElement('video');
+            video.srcObject = stream;
+            video.id = "local_video";
+            video.play().then(() => {
+                console.log("Local video playing");
+            });
+
+            if (currentStreamVideo) {
+                currentStreamVideo.pause();
+            }
+            currentStreamVideo = video;
+
+            world.addVideoForUser(video);
+        });
+    }
 }
 
 function disconnectCall() {
@@ -126,6 +232,9 @@ function handleCallDisconnect() {
         });
         mediaStream = null;
     }
+
+    videoEnabled = false;
+    audioEnabled = false;
 
     if (screenStream) {
         screenStream.getTracks().forEach(track => {

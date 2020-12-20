@@ -15,6 +15,7 @@ class World {
         this.resourseTracker = new ResourceTracker();
         this.frameTimer = null;
         this.user = new THREE.Group();
+        this.userHeadMesh = new THREE.Mesh();
         this.position = new THREE.Vector3();
         this.rotation = new THREE.Quaternion();
         this.sendUserPosition = sendUserPositionCallback;
@@ -61,6 +62,8 @@ class World {
         const userUpperBodyMat = new THREE.MeshNormalMaterial();
         let userUpperBodyMesh = new THREE.Mesh(userUpperBodyGeo, userUpperBodyMat);
         userUpperBodyMesh.position.y = 7.5;
+
+        this.userHeadMesh = userUpperBodyMesh;
 
         let userBody = new THREE.Object3D();
         userBody.add(userUpperBodyMesh);
@@ -190,6 +193,20 @@ class World {
         if (screenBoard) {
             this.scene.remove(screenBoard);
         }
+    }
+
+    addVideoForUser = (video) => {
+        const videoTexture = new THREE.VideoTexture(video);
+        this.userHeadMesh.material = new THREE.MeshBasicMaterial({map: videoTexture});
+    }
+
+    addAudioForUser = (video) => {
+        const videoTexture = new THREE.VideoTexture(video);
+        this.userHeadMesh.material = new THREE.MeshBasicMaterial({map: videoTexture});
+    }
+
+    removeStreamForUser = () => {
+        this.userHeadMesh.material = new THREE.MeshNormalMaterial();
     }
 
     resizeRendererToDisplaySize = () => {

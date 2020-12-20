@@ -20,12 +20,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="77ab336b-4722-4935-a723-eec6ffc24240" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/public/build/index.bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/build/index.bundle.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/public/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/main.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/main.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/public/world.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/world.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -88,7 +85,7 @@
       <workItem from="1608289957964" duration="683000" />
       <workItem from="1608292868892" duration="7118000" />
       <workItem from="1608394261287" duration="11000" />
-      <workItem from="1608440347031" duration="4058000" />
+      <workItem from="1608440347031" duration="10347000" />
     </task>
     <servers />
   </component>
