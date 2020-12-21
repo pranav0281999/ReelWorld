@@ -40,7 +40,25 @@ io.on("connection", client => {
             position: clients[client.id].position,
             rotation: clients[client.id].rotation,
         });
-    })
+    });
+
+    client.on("offer-to-client", data => {
+        console.log('Offer from ' + client.id + " to " + data.clientId);
+
+        io.to(data.clientId).emit("offer-from-client", {
+            clientId: client.id,
+            offer: data.offer
+        });
+    });
+
+    client.on("answer-to-client", data => {
+        console.log('Answer from ' + client.id + " to " + data.clientId);
+
+        io.to(data.clientId).emit("answer-from-client", {
+            clientId: client.id,
+            answer: data.answer
+        });
+    });
 
     client.on("disconnect", (reason) => {
         console.log("Client disconnected: " + client.id + " for reason: " + reason);

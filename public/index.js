@@ -51,6 +51,8 @@ function init() {
                 if (data.clients[key]) {
                     world.addClient(key);
                     world.updateClient(key, data.clients[key].position, data.clients[key].rotation);
+
+                    addPeerConnectionForClient(key);
                 }
             }
         });
@@ -69,6 +71,9 @@ function init() {
 
         if (selfSocketId !== data.clientId) {
             world.addClient(data.clientId);
+
+            addPeerConnectionForClient(data.clientId);
+            callClient(data.clientId);
         }
     });
 
@@ -79,6 +84,101 @@ function init() {
             world.removeClient(data.clientId);
         }
     });
+
+    socket.on("offer-from-client", data => {
+        console.log("Offer from " + data.clientId);
+
+        world.clients[data.clientId].peerConnection.setRemoteDescription(data.offer)
+            .then(value => {
+                console.log("Remote description set " + value);
+
+                const answer = world.clients[data.clientId].peerConnection.createAnswer().then(answer => {
+                    world.clients[data.clientId].peerConnection.setLocalDescription(answer)
+                        .then(value => {
+                            console.log("Local answer description set " + value);
+
+                            socket.emit("answer-to-client", {
+                                clientId: data.clientId,
+                                answer: answer
+                            });
+                        })
+                        .catch(reason => console.log("Couldn't set local answer description " + reason));
+                })
+                    .catch(reason => console.log("Couldn't create answer"));
+            })
+            .catch(reason => console.log("Couldn't set remote offer description " + reason));
+    });
+
+    socket.on("answer-from-client", data => {
+        console.log("Answer from " + data.clientId);
+
+        world.clients[data.clientId].peerConnection.setRemoteDescription(data.answer)
+            .then(value => {
+                console.log("Remote answer description set " + value);
+            })
+            .catch(reason => console.log("Couldn't set remote answer description " + reason));
+    });
+}
+
+function addPeerConnectionForClient(key) {
+    let peerConnection = new RTCPeerConnection({
+        iceServers:
+            [{
+                urls:
+                    ["stun:stun.l.google.com:19302",
+                        "stun:stun1.l.google.com:19302"]
+            }]
+    });
+
+    peerConnection.onconnectionstatechange = () => {
+        console.log("onconnectionstatechange");
+    }
+    peerConnection.ondatachannel = () => {
+        console.log("ondatachannel");
+    }
+    peerConnection.onicecandidate = () => {
+        console.log("onicecandidate");
+    }
+    peerConnection.onicecandidateerror = () => {
+        console.log("onicecandidateerror");
+    }
+    peerConnection.oniceconnectionstatechange = () => {
+        console.log("oniceconnectionstatechange");
+    }
+    peerConnection.onicegatheringstatechange = () => {
+        console.log("onicegatheringstatechange");
+    }
+    peerConnection.ontrack = () => {
+        console.log("ontrack");
+    }
+    peerConnection.onstatsended = () => {
+        console.log("onstatsended");
+    }
+    peerConnection.onsignalingstatechange = () => {
+        console.log("onsignalingstatechange");
+    }
+    peerConnection.onnegotiationneeded = () => {
+        console.log("onnegotiationneeded");
+    }
+
+    world.clients[key].peerConnection = peerConnection;
+}
+
+function callClient(key) {
+    const offer = world.clients[key].peerConnection.createOffer()
+        .then(offer => {
+            world.clients[key].peerConnection.setLocalDescription(offer)
+                .then(value => {
+                    console.log("Local offer description set " + value);
+
+                    socket.emit("offer-to-client", {
+                        clientId: key,
+                        offer: offer
+                    });
+                })
+                .catch(reason => console.log("Couldn't set local offer description " + reason));
+        })
+        .catch(reason => console.log("Couldn't create offer"));
 }
 
 function sendUserPosition() {
