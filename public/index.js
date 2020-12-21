@@ -81,6 +81,7 @@ function init() {
         console.log("client_exit");
 
         if (selfSocketId !== data.clientId) {
+            world.clients[data.clientId].peerConnection.close();
             world.removeClient(data.clientId);
         }
     });
@@ -151,6 +152,9 @@ function addPeerConnectionForClient(key) {
     peerConnection.ontrack = () => {
         console.log("ontrack");
     }
+    peerConnection.ontrack = () => {
+        console.log("ontrack");
+    }
     peerConnection.onstatsended = () => {
         console.log("onstatsended");
     }
@@ -159,9 +163,13 @@ function addPeerConnectionForClient(key) {
     }
     peerConnection.onnegotiationneeded = () => {
         console.log("onnegotiationneeded");
+
+        callClient(key);
     }
 
     world.clients[key].peerConnection = peerConnection;
+    world.clients[key].videoSender = null;
+    world.clients[key].audioSender = null;
 }
 
 function callClient(key) {
@@ -213,6 +221,17 @@ function toggleAudio() {
         audioEnabled = false;
 
         world.removeAudioStreamForUser();
+
+        Object.keys(world.clients).forEach(function (key) {
+            if (key !== selfSocketId) {
+                if (world.clients[key]) {
+                    if (world.clients[key].audioSender) {
+                        world.clients[key].peerConnection.removeTrack(world.clients[key].audioSender);
+                        world.clients[key].audioSender = null;
+                    }
+                }
+            }
+        });
     } else {
         let constraints = {
             audio: true
@@ -224,6 +243,14 @@ function toggleAudio() {
             audioStream = stream;
 
             world.addAudioForUser(stream);
+
+            Object.keys(world.clients).forEach(function (key) {
+                if (key !== selfSocketId) {
+                    if (world.clients[key]) {
+                        world.clients[key].audioSender = world.clients[key].peerConnection.addTrack(stream.getAudioTracks()[0], stream);
+                    }
+                }
+            });
         });
     }
 }
@@ -245,6 +272,17 @@ function toggleVideo() {
             currentVideoElement.pause();
         }
         currentVideoElement = null;
+
+        Object.keys(world.clients).forEach(function (key) {
+            if (key !== selfSocketId) {
+                if (world.clients[key]) {
+                    if (world.clients[key].videoSender) {
+                        world.clients[key].peerConnection.removeTrack(world.clients[key].videoSender);
+                        world.clients[key].videoSender = null;
+                    }
+                }
+            }
+        });
     } else {
         let constraints = {
             audio: false,
@@ -272,6 +310,14 @@ function toggleVideo() {
             currentVideoElement = video;
 
             world.addVideoForUser(video);
+
+            Object.keys(world.clients).forEach(function (key) {
+                if (key !== selfSocketId) {
+                    if (world.clients[key]) {
+                        world.clients[key].videoSender = world.clients[key].peerConnection.addTrack(stream.getVideoTracks()[0], stream);
+                    }
+                }
+            });
         });
     }
 }

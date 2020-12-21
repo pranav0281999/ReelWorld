@@ -2,7 +2,6 @@ import * as THREE from "./lib/three.module.js";
 import {PlayerControls} from "./lib/playerControls.js";
 import {CSS2DRenderer, CSS2DObject} from "./lib/CSS2DRenderer.js";
 import {ResourceTracker} from "./threejsResourceTracker";
-import {PositionalAudioHelper} from "../../../examples/jsm/helpers/PositionalAudioHelper";
 
 class World {
     constructor(sendUserPositionCallback) {
