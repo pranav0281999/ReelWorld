@@ -60,6 +60,15 @@ io.on("connection", client => {
         });
     });
 
+    client.on("icecandidate-to-client", data => {
+        console.log('ICECandidate from ' + client.id + " to " + data.clientId);
+
+        io.to(data.clientId).emit("icecandidate-from-client", {
+            clientId: client.id,
+            icecandidate: data.icecandidate
+        });
+    });
+
     client.on("disconnect", (reason) => {
         console.log("Client disconnected: " + client.id + " for reason: " + reason);
         delete clients[client.id];

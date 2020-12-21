@@ -81,7 +81,7 @@ function init() {
         console.log("client_exit");
 
         if (selfSocketId !== data.clientId) {
-            world.clients[data.clientId].peerConnection.close();
+            closePeerConnection(data.clientId);
             world.removeClient(data.clientId);
         }
     });
@@ -119,6 +119,16 @@ function init() {
             })
             .catch(reason => console.log("Couldn't set remote answer description " + reason));
     });
+
+    socket.on("icecandidate-from-client", data => {
+        console.log("ICECandidate from " + data.clientId);
+
+        const candidate = new RTCIceCandidate(data.icecandidate);
+
+        world.clients[data.clientId].peerConnection.addIceCandidate(candidate)
+            .then(value => console.log("ICECandidate added" + value))
+            .catch(reason => console.log("Couldn't add ICECandidate " + reason));
+    });
 }
 
 function addPeerConnectionForClient(key) {
@@ -134,33 +144,62 @@ function addPeerConnectionForClient(key) {
     peerConnection.onconnectionstatechange = () => {
         console.log("onconnectionstatechange");
     }
+
     peerConnection.ondatachannel = () => {
         console.log("ondatachannel");
     }
-    peerConnection.onicecandidate = () => {
+
+    peerConnection.onicecandidate = (event) => {
         console.log("onicecandidate");
+
+        if (event.candidate) {
+            socket.emit("icecandidate-to-client", {
+                clientId: key,
+                icecandidate: event.candidate
+            });
+        }
     }
+
     peerConnection.onicecandidateerror = () => {
         console.log("onicecandidateerror");
     }
+
     peerConnection.oniceconnectionstatechange = () => {
         console.log("oniceconnectionstatechange");
+
+        switch (peerConnection.iceConnectionState) {
+            case "closed":
+            case "failed":
+                closePeerConnection(key);
+                break;
+        }
     }
+
     peerConnection.onicegatheringstatechange = () => {
         console.log("onicegatheringstatechange");
     }
+
     peerConnection.ontrack = () => {
         console.log("ontrack");
     }
+
     peerConnection.ontrack = () => {
         console.log("ontrack");
     }
+
     peerConnection.onstatsended = () => {
         console.log("onstatsended");
     }
-    peerConnection.onsignalingstatechange = () => {
+
+    peerConnection.onsignalingstatechange = (event) => {
         console.log("onsignalingstatechange");
+
+        switch (peerConnection.signalingState) {
+            case "closed":
+                closePeerConnection(key);
+        }
     }
+
     peerConnection.onnegotiationneeded = () => {
         console.log("onnegotiationneeded");
 
@@ -171,6 +210,23 @@ function addPeerConnectionForClient(key) {
     world.clients[key].videoSender = null;
     world.clients[key].audioSender = null;
 }
+
+function closePeerConnection(key) {
+    if (world.clients[key].peerConnection) {
+        world.clients[key].peerConnection.ontrack = null;
+        world.clients[key].peerConnection.onremovetrack = null;
+        world.clients[key].peerConnection.onremovestream = null;
+        world.clients[key].peerConnection.onicecandidate = null;
+        world.clients[key].peerConnection.oniceconnectionstatechange = null;
+        world.clients[key].peerConnection.onsignalingstatechange = null;
+        world.clients[key].peerConnection.onicegatheringstatechange = null;
+        world.clients[key].peerConnection.onnegotiationneeded = null;
+
+        world.clients[key].peerConnection.close();
+        world.clients[key].peerConnection = null;
+    }
+}
+
 
 function callClient(key) {
     const offer = world.clients[key].peerConnection.createOffer()
