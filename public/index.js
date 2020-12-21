@@ -179,12 +179,28 @@ function addPeerConnectionForClient(key) {
         console.log("onicegatheringstatechange");
     }
 
-    peerConnection.ontrack = () => {
+    peerConnection.ontrack = (event) => {
         console.log("ontrack");
-    }
 
-    peerConnection.ontrack = () => {
-        console.log("ontrack");
+        if (event.streams[0].getAudioTracks().length > 0) {
+            world.addAudioForClient(key, event.streams[0]);
+
+            event.streams[0].onremovetrack = (ev) => {
+                if (event.streams[0].getAudioTracks().length < 1) {
+                    world.removeAudioForClient(key);
+                }
+            }
+        }
+
+        if (event.streams[0].getVideoTracks().length > 0) {
+            world.addVideoForClient(key, event.streams[0]);
+
+            event.streams[0].onremovetrack = (ev) => {
+                if (event.streams[0].getVideoTracks().length < 1) {
+                    world.removeVideoForClient(key);
+                }
+            }
+        }
     }
 
     peerConnection.onstatsended = () => {
@@ -276,8 +292,6 @@ function toggleAudio() {
 
         audioEnabled = false;
 
-        world.removeAudioStreamForUser();
-
         Object.keys(world.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (world.clients[key]) {
@@ -297,8 +311,6 @@ function toggleAudio() {
             audioEnabled = true;
 
             audioStream = stream;
-
-            world.addAudioForUser(stream);
 
             Object.keys(world.clients).forEach(function (key) {
                 if (key !== selfSocketId) {

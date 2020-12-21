@@ -20,7 +20,6 @@ class World {
         this.sendUserPosition = sendUserPositionCallback;
         this.clients = {};
         this.audioListener = new THREE.AudioListener();
-        this.userAudio = null;
     }
 
     init = () => {
@@ -174,22 +173,32 @@ class World {
         let client = this.resourseTracker.track(new THREE.Group());
         client.add(clientBody);
 
-        this.clients[clientId] = client;
+        let userAudio = new THREE.PositionalAudio(this.audioListener);
+        userAudio.setRefDistance(10);
+        userAudio.setMaxDistance(200);
+        client.add(userAudio);
+
+        this.clients[clientId] = {};
+
+        this.clients[clientId].mesh = client;
+        this.clients[clientId].audio = userAudio;
+        this.clients[clientId].video = null;
+        this.clients[clientId].upperBody = clientUpperBodyMesh;
 
         this.scene.add(client);
     }
 
     removeClient = (clientId) => {
         if (this.clients[clientId]) {
-            this.scene.remove(this.clients[clientId]);
+            this.scene.remove(this.clients[clientId].mesh);
             delete this.clients[clientId];
         }
     }
 
     updateClient = (clientId, position, rotation) => {
         if (this.clients[clientId]) {
-            this.clients[clientId].position.set(...position);
-            this.clients[clientId].quaternion.set(...rotation);
+            this.clients[clientId].mesh.position.set(...position);
+            this.clients[clientId].mesh.quaternion.set(...rotation);
         }
     }
 
@@ -206,26 +215,48 @@ class World {
         this.userHeadMesh.material = new THREE.MeshBasicMaterial({map: videoTexture});
     }
 
-    addAudioForUser = (stream) => {
-        this.userAudio = new THREE.PositionalAudio(this.audioListener);
-        this.userAudio.position.set(0, 0, 0);
+    addVideoForClient = (clientId, stream) => {
+        if (this.clients[clientId]) {
+            let video = document.createElement('video');
+            video.srcObject = stream;
+            video.play().then(() => {
+                console.log("Remote video playing");
+            });
 
-        this.userAudio.setMediaStreamSource(stream);
-        this.userAudio.setRefDistance(1);
-        this.userAudio.setMaxDistance(200);
-        this.userAudio.play();
+            const videoTexture = new THREE.VideoTexture(video);
+            this.clients[clientId].upperBody.material = new THREE.MeshBasicMaterial({map: videoTexture});
+            this.clients[clientId].video = video;
+        }
+    }
 
-        this.scene.add(this.userAudio);
+    addAudioForClient = (clientId, stream) => {
+        if (this.clients[clientId]) {
+            this.clients[clientId].audio.setMediaStreamSource(stream);
+            this.clients[clientId].audio.play();
+        }
     }
 
     removeVideoStreamForUser = () => {
         this.userHeadMesh.material = new THREE.MeshNormalMaterial();
     }
 
-    removeAudioStreamForUser = () => {
-        if (this.userAudio) {
-            this.scene.remove(this.userAudio);
-            this.userAudio = null;
+    removeVideoForClient = (clientId) => {
+        if (this.clients[clientId]) {
+            this.clients[clientId].upperBody.material = new THREE.MeshNormalMaterial();
+
+            if (this.clients[clientId].video) {
+                this.clients[clientId].video.pause();
+            }
+
+            this.clients[clientId].video = null;
+        }
+    }
+
+    removeAudioForClient = (clientId) => {
+        if (this.clients[clientId]) {
+            if (this.clients[clientId].audio.isPlaying) {
+                this.clients[clientId].audio.stop();
+            }
         }
     }
 
@@ -281,7 +312,6 @@ class World {
 
     endWorld = () => {
         this.removeVideoStreamForUser();
-        this.removeAudioStreamForUser();
         this.removeScreenShare();
 
         Object.keys(this.clients).forEach((key) => {
