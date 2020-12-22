@@ -190,6 +190,9 @@ class World {
 
     removeClient = (clientId) => {
         if (this.clients[clientId]) {
+            this.removeAudioForClient(clientId);
+            this.removeVideoForClient(clientId);
+
             this.scene.remove(this.clients[clientId].mesh);
             delete this.clients[clientId];
         }
