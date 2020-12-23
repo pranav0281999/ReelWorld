@@ -144,6 +144,8 @@ class World {
         this.clients[clientId].video = null;
         this.clients[clientId].screen = null;
         this.clients[clientId].upperBody = clientUpperBodyMesh;
+        this.clients[clientId].body = clientBody;
+        this.clients[clientId].label = clientLabel;
 
         this.scene.add(client);
     }
@@ -152,6 +154,8 @@ class World {
         if (this.clients[clientId]) {
             this.removeAudioForClient(clientId);
             this.removeVideoForClient(clientId);
+
+            this.clients[clientId].body.remove(this.clients[clientId].label);
 
             this.scene.remove(this.clients[clientId].mesh);
             delete this.clients[clientId];
