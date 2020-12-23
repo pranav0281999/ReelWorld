@@ -334,7 +334,10 @@ function turnAudioOff() {
 
 function turnAudioOn() {
     let constraints = {
-        audio: true
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true
+        }
     };
 
     let localMediaStream = navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
@@ -397,8 +400,9 @@ function turnVideoOn() {
         audio: false,
         video: {
             frameRate: 10,
-            width: 1280,
-            height: 720
+            width: 100,
+            height: 100,
+            aspectRatio: 1
         }
     };
 

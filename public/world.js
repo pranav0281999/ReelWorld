@@ -1,6 +1,6 @@
 import * as THREE from "./lib/three.module.js";
 import {PlayerControls} from "./lib/playerControls.js";
-import {CSS2DRenderer, CSS2DObject} from "./lib/CSS2DRenderer.js";
+import {CSS2DObject, CSS2DRenderer} from "./lib/CSS2DRenderer.js";
 import {ResourceTracker} from "./threejsResourceTracker";
 
 class World {
@@ -214,8 +214,18 @@ class World {
     }
 
     addVideoForUser = (video) => {
+        const basicMaterial = new THREE.MeshBasicMaterial();
+
         const videoTexture = new THREE.VideoTexture(video);
-        this.userHeadMesh.material = new THREE.MeshBasicMaterial({map: videoTexture});
+
+        this.userHeadMesh.material = [
+            basicMaterial,
+            basicMaterial,
+            basicMaterial,
+            basicMaterial,
+            new THREE.MeshBasicMaterial({map: videoTexture}),
+            basicMaterial,
+        ];
     }
 
     addVideoForClient = (clientId, stream) => {
@@ -226,8 +236,18 @@ class World {
                 console.log("Remote video playing");
             });
 
+            const basicMaterial = new THREE.MeshBasicMaterial();
+
             const videoTexture = new THREE.VideoTexture(video);
-            this.clients[clientId].upperBody.material = new THREE.MeshBasicMaterial({map: videoTexture});
+
+            this.clients[clientId].upperBody.material = [
+                basicMaterial,
+                basicMaterial,
+                basicMaterial,
+                basicMaterial,
+                basicMaterial,
+                new THREE.MeshBasicMaterial({map: videoTexture}),
+            ];
             this.clients[clientId].video = video;
         }
     }
