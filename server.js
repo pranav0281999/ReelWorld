@@ -69,6 +69,33 @@ io.on("connection", client => {
         });
     });
 
+    client.on("offer-to-client-ss", data => {
+        console.log('Offer from ' + client.id + " to " + data.clientId);
+
+        io.to(data.clientId).emit("offer-from-client-ss", {
+            clientId: client.id,
+            offer: data.offer
+        });
+    });
+
+    client.on("answer-to-client-ss", data => {
+        console.log('Answer from ' + client.id + " to " + data.clientId);
+
+        io.to(data.clientId).emit("answer-from-client-ss", {
+            clientId: client.id,
+            answer: data.answer
+        });
+    });
+
+    client.on("icecandidate-to-client-ss", data => {
+        console.log('ICECandidate from ' + client.id + " to " + data.clientId);
+
+        io.to(data.clientId).emit("icecandidate-from-client-ss", {
+            clientId: client.id,
+            icecandidate: data.icecandidate
+        });
+    });
+
     client.on("disconnect", (reason) => {
         console.log("Client disconnected: " + client.id + " for reason: " + reason);
         delete clients[client.id];

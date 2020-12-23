@@ -10,7 +10,7 @@ class World {
         this.renderer = new THREE.WebGLRenderer();
         this.controls = new PlayerControls(this.camera, new THREE.Object3D());
         this.labelRenderer = new CSS2DRenderer();
-        this.sharedScreenBoards = [];
+        this.sharedScreen = null;
         this.resourseTracker = new ResourceTracker();
         this.frameTimer = null;
         this.user = new THREE.Group();
@@ -103,47 +103,6 @@ class World {
         requestAnimationFrame(this.render);
     }
 
-    addScreenShare = (video) => {
-        //TODO cannot be more than 4
-        let videoTexture = new THREE.VideoTexture(video);
-
-        let planeMesh = this.resourseTracker.track(new THREE.Mesh(
-            new THREE.PlaneGeometry(50, 50),
-            new THREE.MeshBasicMaterial({map: videoTexture})
-        ));
-
-        this.sharedScreenBoards.push(planeMesh);
-
-        const numberOfScreens = this.sharedScreenBoards.length - 1;
-
-        video.onloadeddata = function () {
-            const aspectRatio = video.videoWidth / video.videoHeight;
-            planeMesh.scale.set(1, 1 / aspectRatio, 1);
-
-            planeMesh.position.y = 25 / aspectRatio;
-
-            if (numberOfScreens > 1) {
-                if (numberOfScreens % 2) {
-                    planeMesh.rotation.y = -0 * Math.PI / 180;
-                    planeMesh.position.z = -100;
-                } else {
-                    planeMesh.rotation.y = 90 * Math.PI / 180;
-                    planeMesh.position.x = -100;
-                }
-            } else {
-                if (numberOfScreens % 2) {
-                    planeMesh.rotation.y = 180 * Math.PI / 180;
-                    planeMesh.position.z = 100;
-                } else {
-                    planeMesh.rotation.y = -90 * Math.PI / 180;
-                    planeMesh.position.x = 100;
-                }
-            }
-        };
-
-        this.scene.add(planeMesh);
-    }
-
     addClient = (clientId) => {
         //setting up client
         const clientLowerBodyGeo = new THREE.BoxGeometry(5, 5, 5);
@@ -183,6 +142,7 @@ class World {
         this.clients[clientId].mesh = client;
         this.clients[clientId].audio = userAudio;
         this.clients[clientId].video = null;
+        this.clients[clientId].screen = null;
         this.clients[clientId].upperBody = clientUpperBodyMesh;
 
         this.scene.add(client);
@@ -205,11 +165,51 @@ class World {
         }
     }
 
-    removeScreenShare = () => {
-        let screenBoard = this.sharedScreenBoards.pop();
+    addScreenShareForClient = (clientId, stream) => {
+        if (this.clients[clientId]) {
+            let video = document.createElement('video');
+            video.srcObject = stream;
+            video.play().then(() => {
+                console.log("Remote screen playing");
+            });
 
-        if (screenBoard) {
-            this.scene.remove(screenBoard);
+            const videoTexture = new THREE.VideoTexture(video);
+
+            let planeMesh = this.resourseTracker.track(new THREE.Mesh(
+                new THREE.PlaneGeometry(50, 50),
+                new THREE.MeshBasicMaterial({map: videoTexture})
+            ));
+
+            video.onloadeddata = function () {
+                const aspectRatio = video.videoWidth / video.videoHeight;
+                planeMesh.scale.set(1, 1 / aspectRatio, 1);
+
+                planeMesh.position.y = 25 / aspectRatio;
+
+                planeMesh.rotation.y = -0 * Math.PI / 180;
+                planeMesh.position.z = -100;
+            };
+
+            this.sharedScreen = planeMesh;
+
+            this.scene.add(planeMesh);
+
+            this.clients[clientId].screen = video;
+        }
+    }
+
+    removeScreenShareForClient = (clientId) => {
+        if (this.clients[clientId]) {
+            if (this.clients[clientId].screen) {
+                this.clients[clientId].screen.pause();
+            }
+
+            this.clients[clientId].screen = null;
+        }
+
+        if (this.sharedScreen) {
+            this.scene.remove(this.sharedScreen);
+            this.sharedScreen = null;
         }
     }
 
@@ -335,7 +335,6 @@ class World {
 
     endWorld = () => {
         this.removeVideoStreamForUser();
-        this.removeScreenShare();
 
         Object.keys(this.clients).forEach((key) => {
             this.removeClient(key);

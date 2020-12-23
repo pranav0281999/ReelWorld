@@ -74,6 +74,14 @@ function init() {
 
             addPeerConnectionForClient(data.clientId);
             callClient(data.clientId);
+
+            if (screenShareEnabled && screenShareStream) {
+                addScreenSharePeerConnectionForClient(data.clientId);
+
+                world.clients[data.clientId].videoSender = world.clients[data.clientId]
+                    .shareScreenPeerConnection
+                    .addTrack(screenShareStream.getVideoTracks()[0], screenShareStream);
+            }
         }
     });
 
@@ -91,7 +99,7 @@ function init() {
 
         world.clients[data.clientId].peerConnection.setRemoteDescription(data.offer)
             .then(value => {
-                console.log("Remote description set " + value);
+                console.log("Remote offer description set " + value);
 
                 const answer = world.clients[data.clientId].peerConnection.createAnswer().then(answer => {
                     world.clients[data.clientId].peerConnection.setLocalDescription(answer)
@@ -138,6 +146,62 @@ function init() {
         world.clients[data.clientId].peerConnection.addIceCandidate(candidate)
             .then(value => console.log("ICECandidate added" + value))
             .catch(reason => console.log("Couldn't add ICECandidate " + reason));
+    });
+
+    socket.on("offer-from-client-ss", data => {
+        console.log("Offer for screen share from " + data.clientId);
+
+        addScreenSharePeerConnectionForClient(data.clientId);
+
+        world.clients[data.clientId].shareScreenPeerConnection.setRemoteDescription(data.offer)
+            .then(value => {
+                console.log("Remote offer description for screen share set " + value);
+
+                const answer = world.clients[data.clientId].shareScreenPeerConnection
+                    .createAnswer()
+                    .then(answer => {
+                        world.clients[data.clientId].shareScreenPeerConnection.setLocalDescription(answer)
+                            .then(value => {
+                                console.log("Local answer description for screen share set " + value);
+
+                                socket.emit("answer-to-client-ss", {
+                                    clientId: data.clientId,
+                                    answer: answer
+                                });
+                            })
+                            .catch(reason => {
+                                console.log("Couldn't set local answer description for screen share " + reason)
+                            });
+                    })
+                    .catch(reason => console.log("Couldn't create answer for screen share"));
+            })
+            .catch(reason => console.log("Couldn't set remote offer description for screen share " + reason));
+    });
+
+    socket.on("answer-from-client-ss", data => {
+        console.log("Answer for screen share from " + data.clientId);
+
+        world.clients[data.clientId].shareScreenPeerConnection.setRemoteDescription(data.answer)
+            .then(value => {
+                console.log("Remote answer description for screen share set " + value);
+
+                if (screenShareEnabled && screenShareStream) {
+                    world.clients[data.clientId].videoSender = world.clients[data.clientId]
+                        .shareScreenPeerConnection
+                        .addTrack(screenShareStream.getVideoTracks()[0], screenShareStream);
+                }
+            })
+            .catch(reason => console.log("Couldn't set remote answer description for screen share " + reason));
+    });
+
+    socket.on("icecandidate-from-client-ss", data => {
+        console.log("ICECandidate for screen share from " + data.clientId);
+
+        const candidate = new RTCIceCandidate(data.icecandidate);
+
+        world.clients[data.clientId].shareScreenPeerConnection.addIceCandidate(candidate)
+            .then(value => console.log("ICECandidate for screen share added" + value))
+            .catch(reason => console.log("Couldn't add ICECandidate for screen share " + reason));
     });
 }
 
@@ -235,6 +299,93 @@ function addPeerConnectionForClient(key) {
     world.clients[key].peerConnection = peerConnection;
     world.clients[key].videoSender = null;
     world.clients[key].audioSender = null;
+    world.clients[key].shareScreenPeerConnection = null;
+}
+
+function addScreenSharePeerConnectionForClient(key) {
+    let peerConnection = new RTCPeerConnection({
+        iceServers:
+            [{
+                urls:
+                    ["stun:stun.l.google.com:19302",
+                        "stun:stun1.l.google.com:19302"]
+            }]
+    });
+
+    peerConnection.onconnectionstatechange = () => {
+        console.log("onconnectionstatechange screenshare");
+    }
+
+    peerConnection.ondatachannel = () => {
+        console.log("ondatachannel screenshare");
+    }
+
+    peerConnection.onicecandidate = (event) => {
+        console.log("onicecandidate screenshare");
+
+        if (event.candidate) {
+            socket.emit("icecandidate-to-client-ss", {
+                clientId: key,
+                icecandidate: event.candidate
+            });
+        }
+    }
+
+    peerConnection.onicecandidateerror = () => {
+        console.log("onicecandidateerror screenshare");
+    }
+
+    peerConnection.oniceconnectionstatechange = () => {
+        console.log("oniceconnectionstatechange screenshare " + peerConnection.iceConnectionState);
+
+        switch (peerConnection.iceConnectionState) {
+            case "closed":
+            case "disconnected":
+            case "failed":
+                closeScreenSharePeerConnection(key);
+                break;
+        }
+    }
+
+    peerConnection.onicegatheringstatechange = () => {
+        console.log("onicegatheringstatechange screenshare");
+    }
+
+    peerConnection.ontrack = (event) => {
+        console.log("ontrack screenshare");
+
+        if (event.streams[0].getVideoTracks().length > 0) {
+            world.addScreenShareForClient(key, event.streams[0]);
+
+            event.streams[0].onremovetrack = (ev) => {
+                if (event.streams[0].getVideoTracks().length < 1) {
+                    world.removeScreenShareForClient(key);
+                }
+            }
+        }
+    }
+
+    peerConnection.onstatsended = () => {
+        console.log("onstatsended screenshare");
+    }
+
+    peerConnection.onsignalingstatechange = (event) => {
+        console.log("onsignalingstatechange screenshare " + peerConnection.signalingState);
+
+        switch (peerConnection.signalingState) {
+            case "closed":
+                closeScreenSharePeerConnection(key);
+        }
+    }
+
+    peerConnection.onnegotiationneeded = () => {
+        console.log("onnegotiationneeded screenshare");
+
+        callClientForScreenShare(key);
+    }
+
+    world.clients[key].shareScreenPeerConnection = peerConnection;
+    world.clients[key].shareScreenSender = null;
 }
 
 function closePeerConnection(key) {
@@ -253,6 +404,23 @@ function closePeerConnection(key) {
     }
 }
 
+function closeScreenSharePeerConnection(key) {
+    if (world.clients[key].shareScreenPeerConnection) {
+        world.removeScreenShareForClient(key);
+
+        world.clients[key].shareScreenPeerConnection.ontrack = null;
+        world.clients[key].shareScreenPeerConnection.onremovetrack = null;
+        world.clients[key].shareScreenPeerConnection.onremovestream = null;
+        world.clients[key].shareScreenPeerConnection.onicecandidate = null;
+        world.clients[key].shareScreenPeerConnection.oniceconnectionstatechange = null;
+        world.clients[key].shareScreenPeerConnection.onsignalingstatechange = null;
+        world.clients[key].shareScreenPeerConnection.onicegatheringstatechange = null;
+        world.clients[key].shareScreenPeerConnection.onnegotiationneeded = null;
+
+        world.clients[key].shareScreenPeerConnection.close();
+        world.clients[key].shareScreenPeerConnection = null;
+    }
+}
 
 function callClient(key) {
     const offer = world.clients[key].peerConnection.createOffer()
@@ -262,6 +430,23 @@ function callClient(key) {
                     console.log("Local offer description set " + value);
 
                     socket.emit("offer-to-client", {
+                        clientId: key,
+                        offer: offer
+                    });
+                })
+                .catch(reason => console.log("Couldn't set local offer description " + reason));
+        })
+        .catch(reason => console.log("Couldn't create offer"));
+}
+
+function callClientForScreenShare(key) {
+    const offer = world.clients[key].shareScreenPeerConnection.createOffer()
+        .then(offer => {
+            world.clients[key].shareScreenPeerConnection.setLocalDescription(offer)
+                .then(value => {
+                    console.log("Local offer description set " + value);
+
+                    socket.emit("offer-to-client-ss", {
                         clientId: key,
                         offer: offer
                     });
@@ -457,6 +642,15 @@ function turnScreenShareOn() {
         shareScreenButton.textContent = "Stop Sharing";
 
         screenShareEnabled = true;
+
+        Object.keys(world.clients).forEach(function (key) {
+            if (key !== selfSocketId) {
+                if (world.clients[key]) {
+                    addScreenSharePeerConnectionForClient(key);
+                    callClientForScreenShare(key);
+                }
+            }
+        });
     }).catch(err => {
         console.error("Error:" + err);
         return null;
@@ -470,17 +664,17 @@ function turnScreenShareOff() {
             screenShareStream.removeTrack(track);
         });
 
+        Object.keys(world.clients).forEach(function (key) {
+            if (key !== selfSocketId) {
+                if (world.clients[key]) {
+                    closeScreenSharePeerConnection(key);
+                }
+            }
+        });
+
         screenShareStream = null;
 
         screenShareEnabled = false;
-
-        // world.removeVideoStreamForUser();
-        world.removeScreenShare();
-
-        // if (currentVideoElement) {
-        //     currentVideoElement.pause();
-        // }
-        // currentVideoElement = null;
 
         shareScreenButton.textContent = "Share Screen";
     }
