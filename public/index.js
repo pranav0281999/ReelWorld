@@ -11,11 +11,11 @@ let world = null;
 
 let socket;
 
-let videoStream, audioStream, screenStream;
+let videoStream, audioStream, screenShareStream;
 
 let selfSocketId = null;
 
-let audioEnabled = false, videoEnabled = false;
+let audioEnabled = false, videoEnabled = false, screenShareEnabled = false;
 let currentVideoElement = null;
 
 startButton.addEventListener('click', init);
@@ -276,7 +276,7 @@ function callConnect() {
     world = new World(sendUserPosition);
     world.init();
 
-    shareScreenButton.addEventListener('click', shareScreen);
+    shareScreenButton.addEventListener('click', toggleShareScreen);
     disconnectCallButton.addEventListener('click', disconnectCall);
     toggleAudioButton.addEventListener('click', toggleAudio);
     toggleVideoButton.addEventListener('click', toggleVideo);
@@ -410,22 +410,74 @@ function turnVideoOn() {
     });
 }
 
+function toggleShareScreen() {
+    if (screenShareEnabled && screenShareStream) {
+        turnScreenShareOff();
+    } else {
+        turnScreenShareOn();
+    }
+}
+
+function turnScreenShareOn() {
+    let localScreenStream = navigator.mediaDevices.getDisplayMedia({
+        video: {
+            frameRate: 10,
+            width: 1280,
+            height: 720
+        },
+        audio: true
+    }).then((stream) => {
+        screenShareStream = stream;
+
+        shareScreenButton.textContent = "Stop Sharing";
+
+        screenShareEnabled = true;
+    }).catch(err => {
+        console.error("Error:" + err);
+        return null;
+    });
+}
+
+function turnScreenShareOff() {
+    if (screenShareEnabled && screenShareStream) {
+        screenShareStream.getTracks().forEach(track => {
+            track.stop();
+            screenShareStream.removeTrack(track);
+        });
+
+        screenShareStream = null;
+
+        screenShareEnabled = false;
+
+        // world.removeVideoStreamForUser();
+        world.removeScreenShare();
+
+        // if (currentVideoElement) {
+        //     currentVideoElement.pause();
+        // }
+        // currentVideoElement = null;
+
+        shareScreenButton.textContent = "Share Screen";
+    }
+}
+
 function disconnectCall() {
     socket.disconnect();
 }
 
 function handleCallDisconnect() {
     //remove the call options as no longer needed, show overlay
-    stopSharingScreen();
     document.getElementById("conferenceOptions").style.display = "none";
     document.getElementById("streamOptions").style.display = "none";
     document.getElementById("overlay").style.display = "flex";
 
     turnAudioOff();
     turnVideoOff();
+    turnScreenShareOff();
 
     videoEnabled = false;
     audioEnabled = false;
+    screenShareEnabled = false;
 
     Object.keys(world.clients).forEach(function (key) {
         if (key !== selfSocketId) {
@@ -440,52 +492,8 @@ function handleCallDisconnect() {
     world.endWorld();
     world = null;
 
-    if (screenStream) {
-        screenStream.getTracks().forEach(track => {
-            track.stop();
-        });
-        screenStream = null;
-    }
-
-    shareScreenButton.removeEventListener('click', shareScreen);
-    shareScreenButton.removeEventListener('click', stopSharingScreen);
+    shareScreenButton.removeEventListener('click', toggleShareScreen);
     disconnectCallButton.removeEventListener('click', disconnectCall);
     toggleAudioButton.removeEventListener('click', toggleAudio);
     toggleVideoButton.removeEventListener('click', toggleVideo);
-}
-
-function shareScreen() {
-    let localScreenStream = navigator.mediaDevices.getDisplayMedia({
-        video: {
-            frameRate: 10,
-            width: 1280,
-            height: 720
-        },
-        audio: true
-    }).then((stream) => {
-        screenStream = stream;
-        let video = document.createElement('video');
-        video.srcObject = stream;
-        video.id = "local_video";
-        video.play().then(() => {
-            console.log("Local screen playing");
-        });
-
-        world.addScreenShare(video);
-
-        shareScreenButton.textContent = "Stop Sharing";
-        shareScreenButton.removeEventListener('click', shareScreen);
-        shareScreenButton.addEventListener('click', stopSharingScreen);
-    }).catch(err => {
-        console.error("Error:" + err);
-        return null;
-    });
-}
-
-function stopSharingScreen() {
-    shareScreenButton.textContent = "Share Screen";
-    shareScreenButton.removeEventListener('click', stopSharingScreen);
-    shareScreenButton.addEventListener('click', shareScreen);
-
-    world.removeScreenShare();
 }
