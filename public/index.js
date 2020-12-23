@@ -116,6 +116,16 @@ function init() {
         world.clients[data.clientId].peerConnection.setRemoteDescription(data.answer)
             .then(value => {
                 console.log("Remote answer description set " + value);
+
+                if (videoEnabled && videoStream) {
+                    world.clients[data.clientId].videoSender = world.clients[data.clientId].peerConnection
+                        .addTrack(videoStream.getVideoTracks()[0], videoStream);
+                }
+
+                if (audioEnabled && audioStream) {
+                    world.clients[data.clientId].audioSender = world.clients[data.clientId].peerConnection
+                        .addTrack(audioStream.getAudioTracks()[0], audioStream);
+                }
             })
             .catch(reason => console.log("Couldn't set remote answer description " + reason));
     });
@@ -263,8 +273,17 @@ function callClient(key) {
 
 function sendUserPosition() {
     socket.emit("client_transformation", {
-        position: [world.user.position.x, world.user.position.y, world.user.position.z],
-        rotation: [world.user.quaternion.x, world.user.quaternion.y, world.user.quaternion.z, world.user.quaternion.w]
+        position: [
+            world.user.position.x,
+            world.user.position.y,
+            world.user.position.z
+        ],
+        rotation: [
+            world.user.quaternion.x,
+            world.user.quaternion.y,
+            world.user.quaternion.z,
+            world.user.quaternion.w
+        ]
     });
 }
 
@@ -326,7 +345,8 @@ function turnAudioOn() {
         Object.keys(world.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (world.clients[key]) {
-                    world.clients[key].audioSender = world.clients[key].peerConnection.addTrack(stream.getAudioTracks()[0], stream);
+                    world.clients[key].audioSender = world.clients[key].peerConnection
+                        .addTrack(stream.getAudioTracks()[0], stream);
                 }
             }
         });
@@ -403,7 +423,8 @@ function turnVideoOn() {
         Object.keys(world.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (world.clients[key]) {
-                    world.clients[key].videoSender = world.clients[key].peerConnection.addTrack(stream.getVideoTracks()[0], stream);
+                    world.clients[key].videoSender = world.clients[key].peerConnection
+                        .addTrack(stream.getVideoTracks()[0], stream);
                 }
             }
         });
