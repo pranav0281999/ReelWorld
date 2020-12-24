@@ -89,6 +89,9 @@ function init() {
         console.log("client_exit");
 
         if (selfSocketId !== data.clientId) {
+            closeScreenSharePeerConnection(data.clientId);
+            world.removeScreenShareForClient(data.clientId);
+
             closePeerConnection(data.clientId);
             world.removeClient(data.clientId);
         }
@@ -651,6 +654,8 @@ function turnScreenShareOn() {
                 }
             }
         });
+
+        world.addScreenShareForClient(selfSocketId, stream);
     }).catch(err => {
         console.error("Error:" + err);
         return null;
@@ -671,6 +676,8 @@ function turnScreenShareOff() {
                 }
             }
         });
+
+        world.removeScreenShareForClient(selfSocketId);
 
         screenShareStream = null;
 
