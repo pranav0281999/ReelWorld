@@ -11,6 +11,8 @@ const port = 8080;
 
 let clients = {};
 
+let screenShares = {};
+
 app.use(express.static('public'));
 
 http.listen(port, () => {
@@ -96,9 +98,68 @@ io.on("connection", client => {
         });
     });
 
+    client.on("confirm_screen_share", data => {
+        console.log("confirm_screen_share");
+
+        if (Object.keys(screenShares).length >= 4) {
+            io.to(client.id).emit("confirmation_screen_share", {
+                canShareScreen: false
+            });
+        } else {
+            let positions;
+            positions = Object.keys(screenShares).map(function (key) {
+                return screenShares[client.id];
+            });
+
+            let newPosition;
+
+            for (let i = 0; i < 4; i++) {
+                if (positions.find(position => position === i) === undefined) {
+                    newPosition = i;
+                }
+            }
+
+            screenShares[client.id] = newPosition;
+
+            io.to(client.id).emit("confirmation_screen_share", {
+                canShareScreen: true,
+                position: newPosition
+            });
+        }
+    });
+
+    client.on("client_exit_ss", (reason) => {
+        console.log("client_exit_ss: " + client.id + " for reason: " + reason);
+        delete screenShares[client.id];
+
+        io.sockets.emit("client_exit_ss", {
+            clientId: client.id
+        });
+    });
+
+    client.on("remove_screen_share", data => {
+        console.log("remove_screen_share");
+
+        if (Object.keys(screenShares).find(clientId => clientId === client.id) !== undefined) {
+            io.sockets.emit("remove_screen_share", {
+                clientId: client.id
+            });
+        }
+
+        delete screenShares[client.id];
+    });
+
     client.on("disconnect", (reason) => {
         console.log("Client disconnected: " + client.id + " for reason: " + reason);
         delete clients[client.id];
+
+        if (Object.keys(screenShares).find(clientId => clientId === client.id) !== undefined) {
+            io.sockets.emit("remove_screen_share", {
+                clientId: client.id
+            });
+        }
+
+        delete screenShares[client.id];
 
         io.sockets.emit("client_exit", {clientId: client.id});
     });

@@ -146,6 +146,11 @@ class World {
         this.clients[clientId].upperBody = clientUpperBodyMesh;
         this.clients[clientId].body = clientBody;
         this.clients[clientId].label = clientLabel;
+        this.clients[clientId].peerConnection = null;
+        this.clients[clientId].shareScreenPeerConnection = null;
+        this.clients[clientId].videoSender = null;
+        this.clients[clientId].audioSender = null;
+        this.clients[clientId].shareScreenSender = null;
 
         this.scene.add(client);
     }
@@ -169,7 +174,7 @@ class World {
         }
     }
 
-    addScreenShareForClient = (clientId, stream) => {
+    addScreenShareForClient = (clientId, stream, position) => {
         let video = document.createElement('video');
         video.srcObject = stream;
         video.play().then(() => {
@@ -183,16 +188,14 @@ class World {
             new THREE.MeshBasicMaterial({map: videoTexture})
         ));
 
-        const numberOfScreens = Object.keys(this.sharedScreen).length;
-
         video.onloadeddata = function () {
             const aspectRatio = video.videoWidth / video.videoHeight;
             planeMesh.scale.set(1, 1 / aspectRatio, 1);
 
             planeMesh.position.y = 25 / aspectRatio;
 
-            if (numberOfScreens > 1) {
-                if (numberOfScreens % 2) {
+            if (position > 1) {
+                if (position % 2) {
                     planeMesh.rotation.y = 0;
                     planeMesh.position.z = -100;
                 } else {
@@ -200,7 +203,7 @@ class World {
                     planeMesh.position.x = -100;
                 }
             } else {
-                if (numberOfScreens % 2) {
+                if (position % 2) {
                     planeMesh.rotation.y = 180 * Math.PI / 180;
                     planeMesh.position.z = 100;
                 } else {
@@ -210,25 +213,21 @@ class World {
             }
         };
 
-        this.sharedScreen[clientId] = planeMesh;
+        this.sharedScreen[clientId] = {
+            mesh: planeMesh,
+            position: position,
+            screen: video
+        };
 
         this.scene.add(planeMesh);
-
-        if (this.clients[clientId]) {
-            this.clients[clientId].screen = video;
-            this.clients[clientId].screenMesh = planeMesh;
-        }
     }
 
     removeScreenShareForClient = (clientId) => {
-        this.scene.remove(this.sharedScreen[clientId]);
-        delete this.sharedScreen[clientId];
+        if (this.sharedScreen[clientId]) {
+            this.scene.remove(this.sharedScreen[clientId].mesh);
+            this.sharedScreen[clientId].screen.pause();
 
-        if (this.clients[clientId]) {
-            if (this.clients[clientId].screen) {
-                this.clients[clientId].screen.pause();
-                this.clients[clientId].screen = null;
-            }
+            delete this.sharedScreen[clientId];
         }
     }
 
