@@ -163,6 +163,8 @@ function init() {
 
         addScreenSharePeerConnectionForClient(data.clientId, data.position);
 
+        console.log("Screen position: " + data.position);
+
         world.clients[data.clientId].shareScreenPeerConnection.setRemoteDescription(data.offer)
             .then(value => {
                 console.log("Remote offer description for screen share set " + value);
@@ -247,8 +249,12 @@ function addPeerConnectionForClient(key) {
 
         switch (peerConnection.iceConnectionState) {
             case "closed":
+            case "disconnected":
             case "failed":
-                closePeerConnection(key, world.clients[key].peerConnection);
+                if (world.clients[key]) {
+                    closePeerConnection(key, world.clients[key].peerConnection);
+                }
+
                 break;
         }
     }
@@ -353,7 +359,10 @@ function addScreenSharePeerConnectionForClient(key, position) {
             case "closed":
             case "disconnected":
             case "failed":
-                closePeerConnection(key, world.clients[key].shareScreenPeerConnection);
+                if (world.clients[key]) {
+                    closePeerConnection(key, world.clients[key].shareScreenPeerConnection);
+                }
+
                 break;
         }
     }
@@ -627,6 +636,8 @@ function toggleShareScreen() {
 }
 
 function turnScreenShareOn(position) {
+    console.log("Position: " + position);
+
     let localScreenStream = navigator.mediaDevices.getDisplayMedia({
         video: {
             frameRate: 10,
@@ -641,6 +652,8 @@ function turnScreenShareOn(position) {
 
         screenShareEnabled = true;
 
+        world.addScreenShareForClient(selfSocketId, stream, position);
+
         Object.keys(world.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (world.clients[key]) {
@@ -649,8 +662,6 @@ function turnScreenShareOn(position) {
                 }
             }
         });
-
-        world.addScreenShareForClient(selfSocketId, stream, position);
     }).catch(err => {
         console.error("Error:" + err);
         return null;

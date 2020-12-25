@@ -45,7 +45,7 @@ io.on("connection", client => {
     });
 
     client.on("offer-to-client", data => {
-        console.log('Offer from ' + client.id + " to " + data.clientId);
+        console.log('offer-to-client ' + client.id + " to " + data.clientId);
 
         io.to(data.clientId).emit("offer-from-client", {
             clientId: client.id,
@@ -54,7 +54,7 @@ io.on("connection", client => {
     });
 
     client.on("answer-to-client", data => {
-        console.log('Answer from ' + client.id + " to " + data.clientId);
+        console.log('answer-to-client ' + client.id + " to " + data.clientId);
 
         io.to(data.clientId).emit("answer-from-client", {
             clientId: client.id,
@@ -63,7 +63,7 @@ io.on("connection", client => {
     });
 
     client.on("icecandidate-to-client", data => {
-        console.log('ICECandidate from ' + client.id + " to " + data.clientId);
+        console.log('icecandidate-to-client ' + client.id + " to " + data.clientId);
 
         io.to(data.clientId).emit("icecandidate-from-client", {
             clientId: client.id,
@@ -72,16 +72,17 @@ io.on("connection", client => {
     });
 
     client.on("offer-to-client-ss", data => {
-        console.log('Offer from ' + client.id + " to " + data.clientId);
+        console.log('offer-to-client-ss ' + client.id + " to " + data.clientId);
 
         io.to(data.clientId).emit("offer-from-client-ss", {
             clientId: client.id,
-            offer: data.offer
+            offer: data.offer,
+            position: data.position
         });
     });
 
     client.on("answer-to-client-ss", data => {
-        console.log('Answer from ' + client.id + " to " + data.clientId);
+        console.log('answer-to-client-ss ' + client.id + " to " + data.clientId);
 
         io.to(data.clientId).emit("answer-from-client-ss", {
             clientId: client.id,
@@ -90,7 +91,7 @@ io.on("connection", client => {
     });
 
     client.on("icecandidate-to-client-ss", data => {
-        console.log('ICECandidate from ' + client.id + " to " + data.clientId);
+        console.log('icecandidate-to-client-ss ' + client.id + " to " + data.clientId);
 
         io.to(data.clientId).emit("icecandidate-from-client-ss", {
             clientId: client.id,
@@ -98,6 +99,7 @@ io.on("connection", client => {
         });
     });
 
+    //TODO what if screen eventually not shared? Handle deleting client from screenShares
     client.on("confirm_screen_share", data => {
         console.log("confirm_screen_share");
 
@@ -108,18 +110,23 @@ io.on("connection", client => {
         } else {
             let positions;
             positions = Object.keys(screenShares).map(function (key) {
-                return screenShares[client.id];
+                return screenShares[key];
             });
 
             let newPosition;
 
+            console.log(positions);
+
             for (let i = 0; i < 4; i++) {
                 if (positions.find(position => position === i) === undefined) {
                     newPosition = i;
+                    break;
                 }
             }
 
             screenShares[client.id] = newPosition;
+
+            console.log("new position: " + newPosition, screenShares);
 
             io.to(client.id).emit("confirmation_screen_share", {
                 canShareScreen: true,
