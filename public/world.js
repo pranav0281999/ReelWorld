@@ -20,6 +20,8 @@ class World {
         this.clients = {};
         this.audioListener = new THREE.AudioListener();
         this.sharedScreen = {};
+        this.userBody = new THREE.Object3D();
+        this.userLabel = new THREE.Object3D();
     }
 
     init = () => {
@@ -79,6 +81,9 @@ class World {
         const userLabel = new CSS2DObject(userLabelDiv);
         userLabel.position.set(0, 11, 0);
         userBody.add(userLabel);
+
+        this.userBody = userBody;
+        this.userLabel = userLabel;
 
         this.user = this.resourseTracker.track(new THREE.Group());
         this.user.add(userBody);
@@ -357,6 +362,10 @@ class World {
         Object.keys(this.clients).forEach((key) => {
             this.removeClient(key);
         });
+
+        this.userBody.remove(this.userLabel);
+        this.userBody = null;
+        this.userLabel = null;
 
         if (this.frameTimer) {
             clearTimeout(this.frameTimer);
