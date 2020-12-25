@@ -664,6 +664,9 @@ function turnScreenShareOn(position) {
         });
     }).catch(err => {
         console.error("Error:" + err);
+
+        socket.emit("confirm_screen_share_decline", {});
+
         return null;
     });
 }

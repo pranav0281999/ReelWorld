@@ -99,7 +99,6 @@ io.on("connection", client => {
         });
     });
 
-    //TODO what if screen eventually not shared? Handle deleting client from screenShares
     client.on("confirm_screen_share", data => {
         console.log("confirm_screen_share");
 
@@ -142,6 +141,12 @@ io.on("connection", client => {
         io.sockets.emit("client_exit_ss", {
             clientId: client.id
         });
+    });
+
+    client.on("confirm_screen_share_decline", data => {
+        console.log("confirm_screen_share_decline");
+
+        delete screenShares[client.id];
     });
 
     client.on("remove_screen_share", data => {
