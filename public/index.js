@@ -161,7 +161,9 @@ function init() {
     socket.on("offer-from-client-ss", data => {
         console.log("Offer for screen share from " + data.clientId);
 
-        addScreenSharePeerConnectionForClient(data.clientId, data.position);
+        if (!world.clients[data.clientId].shareScreenPeerConnection) {
+            addScreenSharePeerConnectionForClient(data.clientId, data.position);
+        }
 
         console.log("Screen position: " + data.position);
 
@@ -657,8 +659,14 @@ function turnScreenShareOn(position) {
         Object.keys(world.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (world.clients[key]) {
-                    addScreenSharePeerConnectionForClient(key, position);
-                    callClientForScreenShare(key);
+                    if (world.clients[key].shareScreenPeerConnection) {
+                        world.clients[key].shareScreenSender = world.clients[key]
+                            .shareScreenPeerConnection
+                            .addTrack(stream.getVideoTracks()[0], stream);
+                    } else {
+                        addScreenSharePeerConnectionForClient(key, position);
+                        callClientForScreenShare(key);
+                    }
                 }
             }
         });
