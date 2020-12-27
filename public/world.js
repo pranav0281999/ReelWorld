@@ -180,6 +180,20 @@ class World {
     }
 
     addScreenShareForClient = (clientId, stream, position) => {
+        let positions;
+        positions = Object.keys(this.sharedScreen).map((key) => {
+            return this.sharedScreen[key].position;
+        });
+
+        let newPosition;
+
+        for (let i = 0; i < 4; i++) {
+            if (positions.find(position => position === i) === undefined) {
+                newPosition = i;
+                break;
+            }
+        }
+
         let video = document.createElement('video');
         video.srcObject = stream;
         video.play().then(() => {
@@ -199,8 +213,8 @@ class World {
 
             planeMesh.position.y = 25 / aspectRatio;
 
-            if (position > 1) {
-                if (position % 2) {
+            if (newPosition > 1) {
+                if (newPosition % 2) {
                     planeMesh.rotation.y = 0;
                     planeMesh.position.z = -100;
                 } else {
@@ -208,7 +222,7 @@ class World {
                     planeMesh.position.x = -100;
                 }
             } else {
-                if (position % 2) {
+                if (newPosition % 2) {
                     planeMesh.rotation.y = 180 * Math.PI / 180;
                     planeMesh.position.z = 100;
                 } else {
@@ -220,7 +234,7 @@ class World {
 
         this.sharedScreen[clientId] = {
             mesh: planeMesh,
-            position: position,
+            position: newPosition,
             screen: video
         };
 

@@ -76,8 +76,7 @@ io.on("connection", client => {
 
         io.to(data.clientId).emit("offer-from-client-ss", {
             clientId: client.id,
-            offer: data.offer,
-            position: data.position
+            offer: data.offer
         });
     });
 
@@ -107,29 +106,10 @@ io.on("connection", client => {
                 canShareScreen: false
             });
         } else {
-            let positions;
-            positions = Object.keys(screenShares).map(function (key) {
-                return screenShares[key];
-            });
-
-            let newPosition;
-
-            console.log(positions);
-
-            for (let i = 0; i < 4; i++) {
-                if (positions.find(position => position === i) === undefined) {
-                    newPosition = i;
-                    break;
-                }
-            }
-
-            screenShares[client.id] = newPosition;
-
-            console.log("new position: " + newPosition, screenShares);
+            screenShares[client.id] = true;
 
             io.to(client.id).emit("confirmation_screen_share", {
-                canShareScreen: true,
-                position: newPosition
+                canShareScreen: true
             });
         }
     });
