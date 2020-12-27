@@ -87,8 +87,8 @@ function init() {
         console.log("client_exit");
 
         if (selfSocketId !== data.clientId) {
-            closePeerConnection(data.clientId, world.clients[data.clientId].shareScreenPeerConnection);
-            closePeerConnection(data.clientId, world.clients[data.clientId].peerConnection);
+            closeShareScreenPeerConnection(data.clientId);
+            closePeerConnection(data.clientId);
 
             world.removeScreenShareForClient(data.clientId);
             world.removeClient(data.clientId);
@@ -100,7 +100,7 @@ function init() {
 
         if (data.clientId !== selfSocketId) {
             if (!(screenShareStream && screenShareEnabled)) {
-                closePeerConnection(data.clientId, world.clients[data.clientId].shareScreenPeerConnection);
+                closeShareScreenPeerConnection(data.clientId);
             }
 
             world.removeScreenShareForClient(data.clientId);
@@ -259,7 +259,7 @@ function addPeerConnectionForClient(key) {
             case "disconnected":
             case "failed":
                 if (world.clients[key]) {
-                    closePeerConnection(key, world.clients[key].peerConnection);
+                    closePeerConnection(key);
                 }
 
                 break;
@@ -303,7 +303,7 @@ function addPeerConnectionForClient(key) {
 
         switch (peerConnection.signalingState) {
             case "closed":
-                closePeerConnection(key, world.clients[key].peerConnection);
+                closePeerConnection(key);
         }
     }
 
@@ -367,7 +367,7 @@ function addScreenSharePeerConnectionForClient(key) {
             case "disconnected":
             case "failed":
                 if (world.clients[key]) {
-                    closePeerConnection(key, world.clients[key].shareScreenPeerConnection);
+                    closeShareScreenPeerConnection(key);
                 }
 
                 break;
@@ -401,7 +401,7 @@ function addScreenSharePeerConnectionForClient(key) {
 
         switch (peerConnection.signalingState) {
             case "closed":
-                closePeerConnection(key, world.clients[key].shareScreenPeerConnection);
+                closeShareScreenPeerConnection(key);
         }
     }
 
@@ -419,21 +419,39 @@ function addScreenSharePeerConnectionForClient(key) {
     world.clients[key].shareScreenPeerConnection = peerConnection;
 }
 
-function closePeerConnection(key, peerConnection) {
+function closePeerConnection(key) {
     console.log("closePeerConnection");
 
-    if (peerConnection) {
-        peerConnection.ontrack = null;
-        peerConnection.onremovetrack = null;
-        peerConnection.onremovestream = null;
-        peerConnection.onicecandidate = null;
-        peerConnection.oniceconnectionstatechange = null;
-        peerConnection.onsignalingstatechange = null;
-        peerConnection.onicegatheringstatechange = null;
-        peerConnection.onnegotiationneeded = null;
+    if (world.clients[key].peerConnection) {
+        world.clients[key].peerConnection.ontrack = null;
+        world.clients[key].peerConnection.onremovetrack = null;
+        world.clients[key].peerConnection.onremovestream = null;
+        world.clients[key].peerConnection.onicecandidate = null;
+        world.clients[key].peerConnection.oniceconnectionstatechange = null;
+        world.clients[key].peerConnection.onsignalingstatechange = null;
+        world.clients[key].peerConnection.onicegatheringstatechange = null;
+        world.clients[key].peerConnection.onnegotiationneeded = null;
 
-        peerConnection.close();
-        peerConnection = null;
+        world.clients[key].peerConnection.close();
+        world.clients[key].peerConnection = null;
+    }
+}
+
+function closeShareScreenPeerConnection(key) {
+    console.log("closeShareScreenPeerConnection");
+
+    if (world.clients[key].shareScreenPeerConnection) {
+        world.clients[key].shareScreenPeerConnection.ontrack = null;
+        world.clients[key].shareScreenPeerConnection.onremovetrack = null;
+        world.clients[key].shareScreenPeerConnection.onremovestream = null;
+        world.clients[key].shareScreenPeerConnection.onicecandidate = null;
+        world.clients[key].shareScreenPeerConnection.oniceconnectionstatechange = null;
+        world.clients[key].shareScreenPeerConnection.onsignalingstatechange = null;
+        world.clients[key].shareScreenPeerConnection.onicegatheringstatechange = null;
+        world.clients[key].shareScreenPeerConnection.onnegotiationneeded = null;
+
+        world.clients[key].shareScreenPeerConnection.close();
+        world.clients[key].shareScreenPeerConnection = null;
     }
 }
 
@@ -663,6 +681,8 @@ function turnScreenShareOn() {
         Object.keys(world.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (world.clients[key]) {
+                    console.log(world.clients[key].shareScreenPeerConnection);
+
                     if (world.clients[key].shareScreenPeerConnection) {
                         world.clients[key].shareScreenSender = world.clients[key]
                             .shareScreenPeerConnection
@@ -695,7 +715,7 @@ function turnScreenShareOff() {
                 if (world.clients[key]) {
                     if (Object.keys(world.sharedScreen)
                         .find(clientId => clientId === key) === undefined) {
-                        closePeerConnection(key, world.clients[key].shareScreenPeerConnection);
+                        closeShareScreenPeerConnection(key);
                     }
                 }
             }
