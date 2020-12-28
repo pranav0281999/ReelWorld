@@ -51,15 +51,13 @@ function init() {
                 if (data.clients[key]) {
                     world.addClient(key);
                     world.updateClient(key, data.clients[key].position, data.clients[key].rotation);
-
-                    addPeerConnectionForClient(key);
                 }
             }
         });
     });
 
     socket.on("client_transformation", (data) => {
-        console.log("client_transformation");
+        // console.log("client_transformation");
 
         if (selfSocketId !== data.clientId) {
             world.updateClient(data.clientId, data.position, data.rotation);
@@ -72,12 +70,13 @@ function init() {
         if (selfSocketId !== data.clientId) {
             world.addClient(data.clientId);
 
-            addPeerConnectionForClient(data.clientId);
-            callClient(data.clientId);
+            if (videoEnabled && videoStream || audioStream && audioEnabled) {
+                addPeerConnectionForClient(data.clientId);
+                callClient(data.clientId);
+            }
 
             if (screenShareEnabled && screenShareStream) {
                 addScreenSharePeerConnectionForClient(data.clientId);
-
                 callClientForScreenShare(data.clientId);
             }
         }
@@ -118,7 +117,11 @@ function init() {
     });
 
     socket.on("offer-from-client", data => {
-        console.log("Offer from " + data.clientId);
+        console.log("offer-from-client from " + data.clientId);
+
+        if (!world.clients[data.clientId].peerConnection) {
+            addPeerConnectionForClient(data.clientId);
+        }
 
         world.clients[data.clientId].peerConnection.setRemoteDescription(data.offer)
             .then(value => {
@@ -142,7 +145,7 @@ function init() {
     });
 
     socket.on("answer-from-client", data => {
-        console.log("Answer from " + data.clientId);
+        console.log("answer-from-client from " + data.clientId);
 
         world.clients[data.clientId].peerConnection.setRemoteDescription(data.answer)
             .then(value => {
@@ -196,7 +199,7 @@ function init() {
     });
 
     socket.on("answer-from-client-ss", data => {
-        console.log("Answer for screen share from " + data.clientId);
+        console.log("answer-from-client-ss from " + data.clientId);
 
         world.clients[data.clientId].shareScreenPeerConnection.setRemoteDescription(data.answer)
             .then(value => {
@@ -219,208 +222,223 @@ function init() {
 }
 
 function addPeerConnectionForClient(key) {
-    let peerConnection = new RTCPeerConnection({
-        iceServers:
-            [{
-                urls:
-                    ["stun:stun.l.google.com:19302",
-                        "stun:stun1.l.google.com:19302"]
-            }]
-    });
+    let peerConnection;
 
-    peerConnection.onconnectionstatechange = () => {
-        console.log("onconnectionstatechange");
-    }
-
-    peerConnection.ondatachannel = () => {
-        console.log("ondatachannel");
-    }
-
-    peerConnection.onicecandidate = (event) => {
-        // console.log("onicecandidate");
-
-        if (event.candidate) {
-            socket.emit("icecandidate-to-client", {
-                clientId: key,
-                icecandidate: event.candidate
-            });
+    try {
+        peerConnection = new RTCPeerConnection({
+            iceServers:
+                [{
+                    urls:
+                        ["stun:stun.l.google.com:19302",
+                            "stun:stun1.l.google.com:19302"]
+                }]
+        });
+    } catch (e) {
+        console.error(e);
+    } finally {
+        peerConnection.onconnectionstatechange = () => {
+            console.log("onconnectionstatechange");
         }
-    }
 
-    peerConnection.onicecandidateerror = () => {
-        console.log("onicecandidateerror");
-    }
+        peerConnection.ondatachannel = () => {
+            console.log("ondatachannel");
+        }
 
-    peerConnection.oniceconnectionstatechange = () => {
-        console.log("oniceconnectionstatechange");
+        peerConnection.onicecandidate = (event) => {
+            // console.log("onicecandidate");
 
-        switch (peerConnection.iceConnectionState) {
-            case "closed":
-            case "disconnected":
-            case "failed":
-                if (world.clients[key]) {
+            if (event.candidate) {
+                socket.emit("icecandidate-to-client", {
+                    clientId: key,
+                    icecandidate: event.candidate
+                });
+            }
+        }
+
+        peerConnection.onicecandidateerror = () => {
+            console.log("onicecandidateerror");
+        }
+
+        peerConnection.oniceconnectionstatechange = () => {
+            console.log("oniceconnectionstatechange " + peerConnection.iceConnectionState);
+
+            switch (peerConnection.iceConnectionState) {
+                case "closed":
+                case "disconnected":
+                case "failed":
+                    if (world.clients[key]) {
+                        closePeerConnection(key);
+                    }
+
+                    break;
+            }
+        }
+
+        peerConnection.onicegatheringstatechange = () => {
+            console.log("onicegatheringstatechange");
+        }
+
+        peerConnection.ontrack = (event) => {
+            console.log("ontrack");
+
+            if (event.streams[0].getAudioTracks().length > 0) {
+                world.addAudioForClient(key, event.streams[0]);
+
+                event.streams[0].onremovetrack = (ev) => {
+                    if (event.streams[0].getAudioTracks().length < 1) {
+                        world.removeAudioForClient(key);
+                    }
+                }
+            }
+
+            if (event.streams[0].getVideoTracks().length > 0) {
+                world.addVideoForClient(key, event.streams[0]);
+
+                event.streams[0].onremovetrack = (ev) => {
+                    if (event.streams[0].getVideoTracks().length < 1) {
+                        world.removeVideoForClient(key);
+                    }
+                }
+            }
+        }
+
+        peerConnection.onstatsended = () => {
+            console.log("onstatsended");
+        }
+
+        peerConnection.onsignalingstatechange = (event) => {
+            console.log("onsignalingstatechange " + peerConnection.signalingState);
+
+            switch (peerConnection.signalingState) {
+                case "closed":
                     closePeerConnection(key);
-                }
-
-                break;
-        }
-    }
-
-    peerConnection.onicegatheringstatechange = () => {
-        console.log("onicegatheringstatechange");
-    }
-
-    peerConnection.ontrack = (event) => {
-        console.log("ontrack");
-
-        if (event.streams[0].getAudioTracks().length > 0) {
-            world.addAudioForClient(key, event.streams[0]);
-
-            event.streams[0].onremovetrack = (ev) => {
-                if (event.streams[0].getAudioTracks().length < 1) {
-                    world.removeAudioForClient(key);
-                }
             }
         }
 
-        if (event.streams[0].getVideoTracks().length > 0) {
-            world.addVideoForClient(key, event.streams[0]);
+        peerConnection.onnegotiationneeded = () => {
+            console.log("onnegotiationneeded");
 
-            event.streams[0].onremovetrack = (ev) => {
-                if (event.streams[0].getVideoTracks().length < 1) {
-                    world.removeVideoForClient(key);
-                }
-            }
+            callClient(key);
         }
-    }
 
-    peerConnection.onstatsended = () => {
-        console.log("onstatsended");
-    }
-
-    peerConnection.onsignalingstatechange = (event) => {
-        console.log("onsignalingstatechange");
-
-        switch (peerConnection.signalingState) {
-            case "closed":
-                closePeerConnection(key);
+        if (videoEnabled && videoStream) {
+            world.clients[key].videoSender = peerConnection
+                .addTrack(videoStream.getVideoTracks()[0], videoStream);
         }
+
+        if (audioEnabled && audioStream) {
+            world.clients[key].audioSender = peerConnection
+                .addTrack(audioStream.getAudioTracks()[0], audioStream);
+        }
+
+        world.clients[key].peerConnection = peerConnection;
     }
-
-    peerConnection.onnegotiationneeded = () => {
-        console.log("onnegotiationneeded");
-
-        callClient(key);
-    }
-
-    if (videoEnabled && videoStream) {
-        world.clients[key].videoSender = peerConnection
-            .addTrack(videoStream.getVideoTracks()[0], videoStream);
-    }
-
-    if (audioEnabled && audioStream) {
-        world.clients[key].audioSender = peerConnection
-            .addTrack(audioStream.getAudioTracks()[0], audioStream);
-    }
-
-    world.clients[key].peerConnection = peerConnection;
 }
 
 function addScreenSharePeerConnectionForClient(key) {
-    let peerConnection = new RTCPeerConnection({
-        iceServers:
-            [{
-                urls:
-                    ["stun:stun.l.google.com:19302",
-                        "stun:stun1.l.google.com:19302"]
-            }]
-    });
+    let peerConnection;
 
-    peerConnection.onconnectionstatechange = () => {
-        console.log("onconnectionstatechange screenshare");
-    }
-
-    peerConnection.ondatachannel = () => {
-        console.log("ondatachannel screenshare");
-    }
-
-    peerConnection.onicecandidate = (event) => {
-        // console.log("onicecandidate screenshare");
-
-        if (event.candidate) {
-            socket.emit("icecandidate-to-client-ss", {
-                clientId: key,
-                icecandidate: event.candidate
-            });
+    try {
+        peerConnection = new RTCPeerConnection({
+            iceServers:
+                [{
+                    urls:
+                        ["stun:stun.l.google.com:19302",
+                            "stun:stun1.l.google.com:19302"]
+                }]
+        });
+    } catch (e) {
+        console.error(e);
+    } finally {
+        peerConnection.onconnectionstatechange = () => {
+            console.log("onconnectionstatechange screenshare");
         }
-    }
 
-    peerConnection.onicecandidateerror = () => {
-        console.log("onicecandidateerror screenshare");
-    }
-
-    peerConnection.oniceconnectionstatechange = () => {
-        console.log("oniceconnectionstatechange screenshare " + peerConnection.iceConnectionState);
-
-        switch (peerConnection.iceConnectionState) {
-            case "closed":
-            case "disconnected":
-            case "failed":
-                if (world.clients[key]) {
-                    closeShareScreenPeerConnection(key);
-                }
-
-                break;
+        peerConnection.ondatachannel = () => {
+            console.log("ondatachannel screenshare");
         }
-    }
 
-    peerConnection.onicegatheringstatechange = () => {
-        console.log("onicegatheringstatechange screenshare");
-    }
+        peerConnection.onicecandidate = (event) => {
+            // console.log("onicecandidate screenshare");
 
-    peerConnection.ontrack = (event) => {
-        console.log("ontrack screenshare");
+            if (event.candidate) {
+                socket.emit("icecandidate-to-client-ss", {
+                    clientId: key,
+                    icecandidate: event.candidate
+                });
+            }
+        }
 
-        if (event.streams[0].getVideoTracks().length > 0) {
-            world.addScreenShareForClient(key, event.streams[0]);
+        peerConnection.onicecandidateerror = () => {
+            console.log("onicecandidateerror screenshare");
+        }
 
-            event.streams[0].onremovetrack = (ev) => {
-                if (event.streams[0].getVideoTracks().length < 1) {
-                    world.removeScreenShareForClient(key);
+        peerConnection.oniceconnectionstatechange = () => {
+            console.log("oniceconnectionstatechange screenshare " + peerConnection.iceConnectionState);
+
+            switch (peerConnection.iceConnectionState) {
+                case "closed":
+                case "disconnected":
+                case "failed":
+                    if (world.clients[key]) {
+                        closeShareScreenPeerConnection(key);
+                    }
+
+                    break;
+            }
+        }
+
+        peerConnection.onicegatheringstatechange = () => {
+            console.log("onicegatheringstatechange screenshare");
+        }
+
+        peerConnection.ontrack = (event) => {
+            console.log("ontrack screenshare");
+
+            if (event.streams[0].getVideoTracks().length > 0) {
+                world.addScreenShareForClient(key, event.streams[0]);
+
+                event.streams[0].onremovetrack = (ev) => {
+                    if (event.streams[0].getVideoTracks().length < 1) {
+                        world.removeScreenShareForClient(key);
+                    }
                 }
             }
         }
-    }
 
-    peerConnection.onstatsended = () => {
-        console.log("onstatsended screenshare");
-    }
-
-    peerConnection.onsignalingstatechange = (event) => {
-        console.log("onsignalingstatechange screenshare " + peerConnection.signalingState);
-
-        switch (peerConnection.signalingState) {
-            case "closed":
-                closeShareScreenPeerConnection(key);
+        peerConnection.onstatsended = () => {
+            console.log("onstatsended screenshare");
         }
+
+        peerConnection.onsignalingstatechange = (event) => {
+            console.log("onsignalingstatechange screenshare " + peerConnection.signalingState);
+
+            switch (peerConnection.signalingState) {
+                case "closed":
+                    closeShareScreenPeerConnection(key);
+            }
+        }
+
+        peerConnection.onnegotiationneeded = () => {
+            console.log("onnegotiationneeded screenshare");
+
+            callClientForScreenShare(key);
+        }
+
+        if (screenShareEnabled && screenShareStream) {
+            world.clients[key].shareScreenSender = peerConnection
+                .addTrack(screenShareStream.getVideoTracks()[0], screenShareStream);
+        }
+
+        world.clients[key].shareScreenPeerConnection = peerConnection;
     }
-
-    peerConnection.onnegotiationneeded = () => {
-        console.log("onnegotiationneeded screenshare");
-
-        callClientForScreenShare(key);
-    }
-
-    if (screenShareEnabled && screenShareStream) {
-        world.clients[key].shareScreenSender = peerConnection
-            .addTrack(screenShareStream.getVideoTracks()[0], screenShareStream);
-    }
-
-    world.clients[key].shareScreenPeerConnection = peerConnection;
 }
 
 function closePeerConnection(key) {
     console.log("closePeerConnection");
+
+    world.removeAllClientVideo();
+    world.removeAllClientAudio();
 
     if (world.clients[key].peerConnection) {
         world.clients[key].peerConnection.ontrack = null;
@@ -439,6 +457,8 @@ function closePeerConnection(key) {
 
 function closeShareScreenPeerConnection(key) {
     console.log("closeShareScreenPeerConnection");
+
+    world.removeAllClientScreens(selfSocketId);
 
     if (world.clients[key].shareScreenPeerConnection) {
         world.clients[key].shareScreenPeerConnection.ontrack = null;
@@ -540,7 +560,7 @@ function turnAudioOff() {
         Object.keys(world.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (world.clients[key]) {
-                    if (world.clients[key].audioSender) {
+                    if (world.clients[key].audioSender && world.clients[key].peerConnection) {
                         world.clients[key].peerConnection.removeTrack(world.clients[key].audioSender);
                         world.clients[key].audioSender = null;
                     }
@@ -566,8 +586,12 @@ function turnAudioOn() {
         Object.keys(world.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (world.clients[key]) {
-                    world.clients[key].audioSender = world.clients[key].peerConnection
-                        .addTrack(stream.getAudioTracks()[0], stream);
+                    if (world.clients[key].peerConnection) {
+                        world.clients[key].audioSender = world.clients[key].peerConnection
+                            .addTrack(stream.getAudioTracks()[0], stream);
+                    } else {
+                        addPeerConnectionForClient(key);
+                    }
                 }
             }
         });
@@ -603,7 +627,7 @@ function turnVideoOff() {
         Object.keys(world.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (world.clients[key]) {
-                    if (world.clients[key].videoSender) {
+                    if (world.clients[key].videoSender && world.clients[key].peerConnection) {
                         world.clients[key].peerConnection.removeTrack(world.clients[key].videoSender);
                         world.clients[key].videoSender = null;
                     }
@@ -645,8 +669,12 @@ function turnVideoOn() {
         Object.keys(world.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (world.clients[key]) {
-                    world.clients[key].videoSender = world.clients[key].peerConnection
-                        .addTrack(stream.getVideoTracks()[0], stream);
+                    if (world.clients[key].peerConnection) {
+                        world.clients[key].videoSender = world.clients[key].peerConnection
+                            .addTrack(stream.getVideoTracks()[0], stream);
+                    } else {
+                        addPeerConnectionForClient(key);
+                    }
                 }
             }
         });
@@ -681,8 +709,6 @@ function turnScreenShareOn() {
         Object.keys(world.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (world.clients[key]) {
-                    console.log(world.clients[key].shareScreenPeerConnection);
-
                     if (world.clients[key].shareScreenPeerConnection) {
                         world.clients[key].shareScreenSender = world.clients[key]
                             .shareScreenPeerConnection

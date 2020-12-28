@@ -296,6 +296,26 @@ class World {
         }
     }
 
+    removeAllClientVideo = () => {
+        Object.keys(this.clients).forEach((key) => {
+            this.removeVideoForClient(key);
+        });
+    }
+
+    removeAllClientAudio = () => {
+        Object.keys(this.clients).forEach((key) => {
+            this.removeAudioForClient(key);
+        });
+    }
+
+    removeAllClientScreens = (selfSocketId) => {
+        Object.keys(this.sharedScreen).forEach((key) => {
+            if (key !== selfSocketId) {
+                this.removeScreenShareForClient(key);
+            }
+        });
+    }
+
     removeVideoStreamForUser = () => {
         this.userHeadMesh.material = new THREE.MeshNormalMaterial();
     }
