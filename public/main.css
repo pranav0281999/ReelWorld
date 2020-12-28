@@ -71,3 +71,19 @@ body {
     text-transform: uppercase;
     cursor: pointer;
 }
+
+#streamOptions {
+    position: absolute;
+    z-index: 2;
+    bottom: 0;
+    min-width: 30%;
+    min-height: 10%;
+    display: none;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    text-align: center;
+    left: 50%;
+    transform: translate(-50%);
+    background: rgba(0, 0, 0, 0.0);
+}
