@@ -22,6 +22,7 @@ class World {
         this.sharedScreen = {};
         this.userBody = new THREE.Object3D();
         this.userLabel = new THREE.Object3D();
+        this.updateControls = true;
     }
 
     init = () => {
@@ -377,7 +378,9 @@ class World {
                 this.camera.updateProjectionMatrix();
             }
 
-            this.controls.update();
+            if (this.updateControls) {
+                this.controls.update();
+            }
 
             this.renderer.render(this.scene, this.camera);
             this.labelRenderer.render(this.scene, this.camera);

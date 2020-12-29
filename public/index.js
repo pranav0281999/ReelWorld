@@ -6,6 +6,9 @@ const shareScreenButton = document.getElementById("shareScreen");
 const disconnectCallButton = document.getElementById("disconnectCall");
 const toggleAudioButton = document.getElementById("toggleAudio");
 const toggleVideoButton = document.getElementById("toggleVideo");
+const messagingForm = document.getElementById("messagingForm");
+const messagingOptionsDiv = document.getElementById("messagingOptionsDiv");
+let messageInputField = document.getElementById("messageInputField");
 
 let world = null;
 
@@ -218,6 +221,16 @@ function init() {
                 // console.log("ICECandidate for screen share added" + value);
             })
             .catch(reason => console.log("Couldn't add ICECandidate for screen share " + reason));
+    });
+
+    socket.on("public_message", data => {
+        console.log("public_message from " + data.clientId);
+
+        if (data.clientId === selfSocketId) {
+            listMessage("You", data.message);
+        } else {
+            listMessage("Other", data.message);
+        }
     });
 }
 
@@ -529,6 +542,7 @@ function callConnect() {
     document.getElementById("overlay").style.display = "none";
     document.getElementById("conferenceOptions").style.display = "flex";
     document.getElementById("streamOptions").style.display = "flex";
+    messagingOptionsDiv.style.display = "flex";
 
     world = new World(sendUserPosition);
     world.init();
@@ -537,6 +551,47 @@ function callConnect() {
     disconnectCallButton.addEventListener('click', disconnectCall);
     toggleAudioButton.addEventListener('click', toggleAudio);
     toggleVideoButton.addEventListener('click', toggleVideo);
+
+    messageInputField.onfocus = () => {
+        world.updateControls = false;
+    }
+
+    messageInputField.onblur = () => {
+        world.updateControls = true;
+    }
+
+    messagingForm.onsubmit = () => {
+        if (!messageInputField.value.trim() !== '') {
+            socket.emit("public_message", {
+                message: messageInputField.value
+            });
+        }
+
+        messageInputField.value = "";
+        messageInputField.blur();
+
+        return false;
+    }
+}
+
+function listMessage(author, message) {
+    let messageListItem = document.createElement("div");
+    messageListItem.classList.add("messageListItem");
+
+    let messageAuthor = document.createElement("p");
+    messageAuthor.classList.add("messageAuthor");
+    messageAuthor.textContent = author + ":";
+    messageListItem.appendChild(messageAuthor);
+
+    let messageText = document.createElement("p");
+    messageText.classList.add("messageText");
+    messageText.textContent = message;
+    messageListItem.appendChild(messageText);
+
+    let messageListDiv = document.getElementById("messageListDiv");
+    messageListDiv.appendChild(messageListItem);
+
+    messageListDiv.scrollTop = messageListDiv.scrollHeight;
 }
 
 function toggleAudio() {
@@ -768,6 +823,7 @@ function handleCallDisconnect() {
     document.getElementById("conferenceOptions").style.display = "none";
     document.getElementById("streamOptions").style.display = "none";
     document.getElementById("overlay").style.display = "flex";
+    messagingOptionsDiv.style.display = "none";
 
     turnAudioOff();
     turnVideoOff();
@@ -794,4 +850,5 @@ function handleCallDisconnect() {
     disconnectCallButton.removeEventListener('click', disconnectCall);
     toggleAudioButton.removeEventListener('click', toggleAudio);
     toggleVideoButton.removeEventListener('click', toggleVideo);
+    messagingForm.onsubmit = null;
 }

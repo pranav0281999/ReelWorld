@@ -141,6 +141,15 @@ io.on("connection", client => {
         delete screenShares[client.id];
     });
 
+    client.on("public_message", data => {
+        console.log("public_message");
+
+        io.sockets.emit("public_message", {
+            clientId: client.id,
+            message: data.message
+        });
+    });
+
     client.on("disconnect", (reason) => {
         console.log("Client disconnected: " + client.id + " for reason: " + reason);
         delete clients[client.id];
