@@ -30,12 +30,12 @@ overlayForm.onsubmit = () => {
     const name = usernameInput.value;
     const room = chatroomInput.value;
 
-    usernameInput.value = "";
-    chatroomInput.value = "";
-
     if (name.trim() !== "" && room.trim() !== "") {
         username = name;
         chatRoom = room;
+
+        usernameInput.value = "";
+        chatroomInput.value = "";
 
         init();
     }
@@ -643,6 +643,8 @@ function turnAudioOff() {
                 }
             }
         });
+
+        toggleAudioButton.src = "resources/mic.svg";
     }
 }
 
@@ -671,6 +673,8 @@ function turnAudioOn() {
                 }
             }
         });
+
+        toggleAudioButton.src = "resources/mic_off.svg";
     });
 }
 
@@ -711,6 +715,8 @@ function turnVideoOff() {
             }
         });
     }
+
+    toggleVideoButton.src = "resources/videocam.svg";
 }
 
 function turnVideoOn() {
@@ -754,6 +760,8 @@ function turnVideoOn() {
                 }
             }
         });
+
+        toggleVideoButton.src = "resources/videocam_off.svg";
     });
 }
 
@@ -796,6 +804,8 @@ function turnScreenShareOn() {
                 }
             }
         });
+
+        shareScreenButton.src = "resources/cancel_presentation.svg";
     }).catch(err => {
         console.error("Error:" + err);
 
@@ -832,6 +842,8 @@ function turnScreenShareOff() {
         screenShareEnabled = false;
 
         shareScreenButton.textContent = "Share Screen";
+
+        shareScreenButton.src = "resources/present_to_all.svg";
     }
 }
 

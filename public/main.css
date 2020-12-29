@@ -72,6 +72,11 @@ body {
     cursor: pointer;
 }
 
+.optionsImageButton {
+    transform: scale(3);
+    margin: 32px;
+}
+
 #streamOptions {
     position: absolute;
     z-index: 2;
