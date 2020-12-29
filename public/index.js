@@ -3,7 +3,8 @@ import {io} from "socket.io-client";
 
 const startButton = document.getElementById('startButton');
 const usernameInput = document.getElementById('usernameInput');
-const usernameForm = document.getElementById('usernameForm');
+const chatroomInput = document.getElementById('chatroomInput');
+const overlayForm = document.getElementById('overlayForm');
 const shareScreenButton = document.getElementById("shareScreen");
 const disconnectCallButton = document.getElementById("disconnectCall");
 const toggleAudioButton = document.getElementById("toggleAudio");
@@ -16,7 +17,7 @@ let world = null;
 
 let socket;
 
-let username = null;
+let username = null, chatRoom = null;
 
 let videoStream, audioStream, screenShareStream;
 
@@ -25,13 +26,16 @@ let selfSocketId = null;
 let audioEnabled = false, videoEnabled = false, screenShareEnabled = false;
 let currentVideoElement = null;
 
-usernameForm.onsubmit = () => {
+overlayForm.onsubmit = () => {
     const name = usernameInput.value;
+    const room = chatroomInput.value;
 
     usernameInput.value = "";
+    chatroomInput.value = "";
 
-    if (name.trim() !== "") {
+    if (name.trim() !== "" && room.trim() !== "") {
         username = name;
+        chatRoom = room;
 
         init();
     }
@@ -42,7 +46,12 @@ usernameForm.onsubmit = () => {
 function init() {
     startButton.textContent = "Joining...";
 
-    socket = io("", {query: "username=" + username});
+    socket = io("", {
+        query: {
+            username: username,
+            chatroom: chatRoom
+        }
+    });
 
     socket.on("connect", () => {
         startButton.textContent = "Join";

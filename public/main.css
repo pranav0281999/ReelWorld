@@ -154,7 +154,7 @@ textarea {
     color: yellow;
 }
 
-#usernameForm {
+#overlayForm {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -162,6 +162,6 @@ textarea {
     align-items: center;
 }
 
-#usernameInput {
+.overlayFormTextInput {
     height: 3em;
 }

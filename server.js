@@ -20,29 +20,44 @@ http.listen(port, () => {
 });
 
 io.on("connection", client => {
-    console.log("Client connected: " + client.id + " " + client.handshake.query.username);
+    const username = client.handshake.query.username, chatroom = client.handshake.query.chatroom;
 
-    clients[client.id] = {
+    console.log("Client connected: " + username + " for room: " + chatroom);
+
+    if (!clients[chatroom]) {
+        clients[chatroom] = {};
+    }
+
+    if (!screenShares[chatroom]) {
+        screenShares[chatroom] = {};
+    }
+
+    clients[chatroom][client.id] = {
         position: [0, 0, 0],
         rotation: [0, 0, 0, 1],
-        username: client.handshake.query.username
+        username: username,
+        chatroom: chatroom
     };
 
     client.emit("initial_state", {
         clientId: client.id,
-        clients: clients
+        clients: clients[chatroom]
     });
 
-    io.sockets.emit("client_new", {clientId: client.id, username: client.handshake.query.username});
+    Object.keys(clients[chatroom]).forEach(key => {
+        io.to(key).emit("client_new", {clientId: client.id, username: username});
+    });
 
     client.on("client_transformation", data => {
-        clients[client.id].position = data.position;
-        clients[client.id].rotation = data.rotation;
+        clients[chatroom][client.id].position = data.position;
+        clients[chatroom][client.id].rotation = data.rotation;
 
-        io.sockets.emit("client_transformation", {
-            clientId: client.id,
-            position: clients[client.id].position,
-            rotation: clients[client.id].rotation,
+        Object.keys(clients[chatroom]).forEach(key => {
+            io.to(key).emit("client_transformation", {
+                clientId: client.id,
+                position: clients[chatroom][client.id].position,
+                rotation: clients[chatroom][client.id].rotation,
+            });
         });
     });
 
@@ -103,12 +118,12 @@ io.on("connection", client => {
     client.on("confirm_screen_share", data => {
         console.log("confirm_screen_share");
 
-        if (Object.keys(screenShares).length >= 4) {
+        if (Object.keys(screenShares[chatroom]).length >= 4) {
             io.to(client.id).emit("confirmation_screen_share", {
                 canShareScreen: false
             });
         } else {
-            screenShares[client.id] = true;
+            screenShares[chatroom][client.id] = true;
 
             io.to(client.id).emit("confirmation_screen_share", {
                 canShareScreen: true
@@ -118,53 +133,63 @@ io.on("connection", client => {
 
     client.on("client_exit_ss", (reason) => {
         console.log("client_exit_ss: " + client.id + " for reason: " + reason);
-        delete screenShares[client.id];
+        delete screenShares[chatroom][client.id];
 
-        io.sockets.emit("client_exit_ss", {
-            clientId: client.id
+        Object.keys(clients[chatroom]).forEach(key => {
+            io.to(key).emit("client_exit_ss", {
+                clientId: client.id
+            });
         });
     });
 
     client.on("confirm_screen_share_decline", data => {
         console.log("confirm_screen_share_decline");
 
-        delete screenShares[client.id];
+        delete screenShares[chatroom][client.id];
     });
 
     client.on("remove_screen_share", data => {
         console.log("remove_screen_share");
 
-        if (Object.keys(screenShares).find(clientId => clientId === client.id) !== undefined) {
-            io.sockets.emit("remove_screen_share", {
-                clientId: client.id
+        if (Object.keys(screenShares[chatroom]).find(clientId => clientId === client.id) !== undefined) {
+            Object.keys(clients[chatroom]).forEach(key => {
+                io.to(key).emit("remove_screen_share", {
+                    clientId: client.id
+                });
             });
         }
 
-        delete screenShares[client.id];
+        delete screenShares[chatroom][client.id];
     });
 
     client.on("public_message", data => {
         console.log("public_message");
 
-        io.sockets.emit("public_message", {
-            clientId: client.id,
-            message: data.message,
-            username: client.handshake.query.username
+        Object.keys(clients[chatroom]).forEach(key => {
+            io.to(key).emit("public_message", {
+                clientId: client.id,
+                message: data.message,
+                username: username
+            });
         });
     });
 
     client.on("disconnect", (reason) => {
         console.log("Client disconnected: " + client.id + " for reason: " + reason);
-        delete clients[client.id];
+        delete clients[chatroom][client.id];
 
-        if (Object.keys(screenShares).find(clientId => clientId === client.id) !== undefined) {
-            io.sockets.emit("remove_screen_share", {
-                clientId: client.id
+        if (Object.keys(screenShares[chatroom]).find(clientId => clientId === client.id) !== undefined) {
+            Object.keys(clients[chatroom]).forEach(key => {
+                io.to(key).emit("remove_screen_share", {
+                    clientId: client.id
+                });
             });
         }
 
-        delete screenShares[client.id];
+        delete screenShares[chatroom][client.id];
 
-        io.sockets.emit("client_exit", {clientId: client.id});
+        Object.keys(clients[chatroom]).forEach(key => {
+            io.to(key).emit("client_exit", {clientId: client.id});
+        });
     });
 });
