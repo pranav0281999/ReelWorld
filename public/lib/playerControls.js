@@ -324,7 +324,7 @@ let PlayerControls = function (camera, player, domElement) {
         if (scope.enabled === false) return;
         if (scope.userRotate === false) return;
 
-        event.preventDefault();
+        // event.preventDefault();
 
         if (event.button === 0) {
 

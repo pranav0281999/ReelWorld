@@ -4,7 +4,7 @@ import {CSS2DObject, CSS2DRenderer} from "./lib/CSS2DRenderer.js";
 import {ResourceTracker} from "./threejsResourceTracker";
 
 class World {
-    constructor(sendUserPositionCallback) {
+    constructor(sendUserPositionCallback, username) {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera();
         this.renderer = new THREE.WebGLRenderer();
@@ -22,6 +22,8 @@ class World {
         this.sharedScreen = {};
         this.userBody = new THREE.Object3D();
         this.userLabel = new THREE.Object3D();
+        this.updateControls = true;
+        this.username = username;
     }
 
     init = () => {
@@ -74,7 +76,7 @@ class World {
 
         let userLabelDiv = document.createElement('div');
         userLabelDiv.className = 'label';
-        userLabelDiv.textContent = 'You';
+        userLabelDiv.textContent = this.username;
         userLabelDiv.style.marginTop = '-2em';
         userLabelDiv.style.color = "white";
         userLabelDiv.style.fontSize = "2em";
@@ -108,7 +110,7 @@ class World {
         requestAnimationFrame(this.render);
     }
 
-    addClient = (clientId) => {
+    addClient = (clientId, username) => {
         //setting up client
         const clientLowerBodyGeo = new THREE.BoxGeometry(5, 5, 5);
         const clientLowerBodyMat = new THREE.MeshBasicMaterial();
@@ -126,7 +128,7 @@ class World {
 
         let clientLabelDiv = document.createElement('div');
         clientLabelDiv.className = 'label';
-        clientLabelDiv.textContent = 'Other';
+        clientLabelDiv.textContent = username;
         clientLabelDiv.style.marginTop = '-2em';
         clientLabelDiv.style.color = "white";
         clientLabelDiv.style.fontSize = "2em";
@@ -377,7 +379,9 @@ class World {
                 this.camera.updateProjectionMatrix();
             }
 
-            this.controls.update();
+            if (this.updateControls) {
+                this.controls.update();
+            }
 
             this.renderer.render(this.scene, this.camera);
             this.labelRenderer.render(this.scene, this.camera);

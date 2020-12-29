@@ -2,14 +2,22 @@ import {World} from "./world.js";
 import {io} from "socket.io-client";
 
 const startButton = document.getElementById('startButton');
+const usernameInput = document.getElementById('usernameInput');
+const chatroomInput = document.getElementById('chatroomInput');
+const overlayForm = document.getElementById('overlayForm');
 const shareScreenButton = document.getElementById("shareScreen");
 const disconnectCallButton = document.getElementById("disconnectCall");
 const toggleAudioButton = document.getElementById("toggleAudio");
 const toggleVideoButton = document.getElementById("toggleVideo");
+const messagingForm = document.getElementById("messagingForm");
+const messagingOptionsDiv = document.getElementById("messagingOptionsDiv");
+let messageInputField = document.getElementById("messageInputField");
 
 let world = null;
 
 let socket;
+
+let username = null, chatRoom = null;
 
 let videoStream, audioStream, screenShareStream;
 
@@ -18,12 +26,32 @@ let selfSocketId = null;
 let audioEnabled = false, videoEnabled = false, screenShareEnabled = false;
 let currentVideoElement = null;
 
-startButton.addEventListener('click', init);
+overlayForm.onsubmit = () => {
+    const name = usernameInput.value;
+    const room = chatroomInput.value;
+
+    if (name.trim() !== "" && room.trim() !== "") {
+        username = name;
+        chatRoom = room;
+
+        usernameInput.value = "";
+        chatroomInput.value = "";
+
+        init();
+    }
+
+    return false;
+}
 
 function init() {
     startButton.textContent = "Joining...";
 
-    socket = io();
+    socket = io("", {
+        query: {
+            username: username,
+            chatroom: chatRoom
+        }
+    });
 
     socket.on("connect", () => {
         startButton.textContent = "Join";
@@ -42,14 +70,14 @@ function init() {
     });
 
     socket.on("initial_state", (data) => {
-        console.log("initial_state");
+        console.log("initial_state", data);
 
         selfSocketId = data.clientId;
 
         Object.keys(data.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (data.clients[key]) {
-                    world.addClient(key);
+                    world.addClient(key, data.clients[key].username);
                     world.updateClient(key, data.clients[key].position, data.clients[key].rotation);
                 }
             }
@@ -65,10 +93,10 @@ function init() {
     });
 
     socket.on("client_new", (data) => {
-        console.log("client_new");
+        console.log("client_new", data);
 
         if (selfSocketId !== data.clientId) {
-            world.addClient(data.clientId);
+            world.addClient(data.clientId, data.username);
 
             if (videoEnabled && videoStream || audioStream && audioEnabled) {
                 addPeerConnectionForClient(data.clientId);
@@ -218,6 +246,12 @@ function init() {
                 // console.log("ICECandidate for screen share added" + value);
             })
             .catch(reason => console.log("Couldn't add ICECandidate for screen share " + reason));
+    });
+
+    socket.on("public_message", data => {
+        console.log("public_message from " + data.clientId);
+
+        listMessage(data.username, data.message);
     });
 }
 
@@ -529,14 +563,56 @@ function callConnect() {
     document.getElementById("overlay").style.display = "none";
     document.getElementById("conferenceOptions").style.display = "flex";
     document.getElementById("streamOptions").style.display = "flex";
+    messagingOptionsDiv.style.display = "flex";
 
-    world = new World(sendUserPosition);
+    world = new World(sendUserPosition, username);
     world.init();
 
     shareScreenButton.addEventListener('click', toggleShareScreen);
     disconnectCallButton.addEventListener('click', disconnectCall);
     toggleAudioButton.addEventListener('click', toggleAudio);
     toggleVideoButton.addEventListener('click', toggleVideo);
+
+    messageInputField.onfocus = () => {
+        world.updateControls = false;
+    }
+
+    messageInputField.onblur = () => {
+        world.updateControls = true;
+    }
+
+    messagingForm.onsubmit = () => {
+        if (!messageInputField.value.trim() !== '') {
+            socket.emit("public_message", {
+                message: messageInputField.value
+            });
+        }
+
+        messageInputField.value = "";
+        messageInputField.blur();
+
+        return false;
+    }
+}
+
+function listMessage(author, message) {
+    let messageListItem = document.createElement("div");
+    messageListItem.classList.add("messageListItem");
+
+    let messageAuthor = document.createElement("p");
+    messageAuthor.classList.add("messageAuthor");
+    messageAuthor.textContent = author + ":";
+    messageListItem.appendChild(messageAuthor);
+
+    let messageText = document.createElement("p");
+    messageText.classList.add("messageText");
+    messageText.textContent = message;
+    messageListItem.appendChild(messageText);
+
+    let messageListDiv = document.getElementById("messageListDiv");
+    messageListDiv.appendChild(messageListItem);
+
+    messageListDiv.scrollTop = messageListDiv.scrollHeight;
 }
 
 function toggleAudio() {
@@ -567,6 +643,8 @@ function turnAudioOff() {
                 }
             }
         });
+
+        toggleAudioButton.src = "resources/mic.svg";
     }
 }
 
@@ -595,6 +673,8 @@ function turnAudioOn() {
                 }
             }
         });
+
+        toggleAudioButton.src = "resources/mic_off.svg";
     });
 }
 
@@ -635,6 +715,8 @@ function turnVideoOff() {
             }
         });
     }
+
+    toggleVideoButton.src = "resources/videocam.svg";
 }
 
 function turnVideoOn() {
@@ -678,6 +760,8 @@ function turnVideoOn() {
                 }
             }
         });
+
+        toggleVideoButton.src = "resources/videocam_off.svg";
     });
 }
 
@@ -720,6 +804,8 @@ function turnScreenShareOn() {
                 }
             }
         });
+
+        shareScreenButton.src = "resources/cancel_presentation.svg";
     }).catch(err => {
         console.error("Error:" + err);
 
@@ -756,6 +842,8 @@ function turnScreenShareOff() {
         screenShareEnabled = false;
 
         shareScreenButton.textContent = "Share Screen";
+
+        shareScreenButton.src = "resources/present_to_all.svg";
     }
 }
 
@@ -768,6 +856,7 @@ function handleCallDisconnect() {
     document.getElementById("conferenceOptions").style.display = "none";
     document.getElementById("streamOptions").style.display = "none";
     document.getElementById("overlay").style.display = "flex";
+    messagingOptionsDiv.style.display = "none";
 
     turnAudioOff();
     turnVideoOff();
@@ -794,4 +883,5 @@ function handleCallDisconnect() {
     disconnectCallButton.removeEventListener('click', disconnectCall);
     toggleAudioButton.removeEventListener('click', toggleAudio);
     toggleVideoButton.removeEventListener('click', toggleVideo);
+    messagingForm.onsubmit = null;
 }
