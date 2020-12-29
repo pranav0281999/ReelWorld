@@ -20,9 +20,12 @@ http.listen(port, () => {
 });
 
 io.on("connection", client => {
+    console.log("Client connected: " + client.id + " " + client.handshake.query.username);
+
     clients[client.id] = {
         position: [0, 0, 0],
-        rotation: [0, 0, 0, 1]
+        rotation: [0, 0, 0, 1],
+        username: client.handshake.query.username
     };
 
     client.emit("initial_state", {
@@ -30,12 +33,11 @@ io.on("connection", client => {
         clients: clients
     });
 
-    io.sockets.emit("client_new", {clientId: client.id});
-
-    console.log("Client connected: " + client.id);
+    io.sockets.emit("client_new", {clientId: client.id, username: client.handshake.query.username});
 
     client.on("client_transformation", data => {
-        clients[client.id] = data;
+        clients[client.id].position = data.position;
+        clients[client.id].rotation = data.rotation;
 
         io.sockets.emit("client_transformation", {
             clientId: client.id,
@@ -146,7 +148,8 @@ io.on("connection", client => {
 
         io.sockets.emit("public_message", {
             clientId: client.id,
-            message: data.message
+            message: data.message,
+            username: client.handshake.query.username
         });
     });
 

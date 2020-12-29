@@ -2,6 +2,8 @@ import {World} from "./world.js";
 import {io} from "socket.io-client";
 
 const startButton = document.getElementById('startButton');
+const usernameInput = document.getElementById('usernameInput');
+const usernameForm = document.getElementById('usernameForm');
 const shareScreenButton = document.getElementById("shareScreen");
 const disconnectCallButton = document.getElementById("disconnectCall");
 const toggleAudioButton = document.getElementById("toggleAudio");
@@ -14,6 +16,8 @@ let world = null;
 
 let socket;
 
+let username = null;
+
 let videoStream, audioStream, screenShareStream;
 
 let selfSocketId = null;
@@ -21,12 +25,24 @@ let selfSocketId = null;
 let audioEnabled = false, videoEnabled = false, screenShareEnabled = false;
 let currentVideoElement = null;
 
-startButton.addEventListener('click', init);
+usernameForm.onsubmit = () => {
+    const name = usernameInput.value;
+
+    usernameInput.value = "";
+
+    if (name.trim() !== "") {
+        username = name;
+
+        init();
+    }
+
+    return false;
+}
 
 function init() {
     startButton.textContent = "Joining...";
 
-    socket = io();
+    socket = io("", {query: "username=" + username});
 
     socket.on("connect", () => {
         startButton.textContent = "Join";
@@ -45,14 +61,14 @@ function init() {
     });
 
     socket.on("initial_state", (data) => {
-        console.log("initial_state");
+        console.log("initial_state", data);
 
         selfSocketId = data.clientId;
 
         Object.keys(data.clients).forEach(function (key) {
             if (key !== selfSocketId) {
                 if (data.clients[key]) {
-                    world.addClient(key);
+                    world.addClient(key, data.clients[key].username);
                     world.updateClient(key, data.clients[key].position, data.clients[key].rotation);
                 }
             }
@@ -68,10 +84,10 @@ function init() {
     });
 
     socket.on("client_new", (data) => {
-        console.log("client_new");
+        console.log("client_new", data);
 
         if (selfSocketId !== data.clientId) {
-            world.addClient(data.clientId);
+            world.addClient(data.clientId, data.username);
 
             if (videoEnabled && videoStream || audioStream && audioEnabled) {
                 addPeerConnectionForClient(data.clientId);
@@ -226,11 +242,7 @@ function init() {
     socket.on("public_message", data => {
         console.log("public_message from " + data.clientId);
 
-        if (data.clientId === selfSocketId) {
-            listMessage("You", data.message);
-        } else {
-            listMessage("Other", data.message);
-        }
+        listMessage(data.username, data.message);
     });
 }
 
@@ -544,7 +556,7 @@ function callConnect() {
     document.getElementById("streamOptions").style.display = "flex";
     messagingOptionsDiv.style.display = "flex";
 
-    world = new World(sendUserPosition);
+    world = new World(sendUserPosition, username);
     world.init();
 
     shareScreenButton.addEventListener('click', toggleShareScreen);

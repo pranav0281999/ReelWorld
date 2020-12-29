@@ -153,3 +153,15 @@ textarea {
 .messageAuthor {
     color: yellow;
 }
+
+#usernameForm {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+}
+
+#usernameInput {
+    height: 3em;
+}
