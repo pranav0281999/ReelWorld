@@ -6,6 +6,7 @@ const usernameInput = document.getElementById('usernameInput');
 const chatroomInput = document.getElementById('chatroomInput');
 const overlayForm = document.getElementById('overlayForm');
 const shareScreenButton = document.getElementById("shareScreen");
+const addPersonButton = document.getElementById("addPerson");
 const disconnectCallButton = document.getElementById("disconnectCall");
 const toggleAudioButton = document.getElementById("toggleAudio");
 const toggleVideoButton = document.getElementById("toggleVideo");
@@ -26,6 +27,15 @@ let selfSocketId = null;
 let audioEnabled = false, videoEnabled = false, screenShareEnabled = false;
 let currentVideoElement = null;
 
+let urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has("roomname")) {
+    const roomnameParam = urlParams.get("roomname").trim();
+
+    if (roomnameParam !== "") {
+        chatroomInput.value = roomnameParam;
+    }
+}
+
 overlayForm.onsubmit = () => {
     const name = usernameInput.value;
     const room = chatroomInput.value;
@@ -36,6 +46,10 @@ overlayForm.onsubmit = () => {
 
         usernameInput.value = "";
         chatroomInput.value = "";
+
+        const url = new URL(window.location);
+        url.searchParams.set('roomname', chatRoom);
+        window.history.pushState({}, '', url);
 
         init();
     }
@@ -70,7 +84,7 @@ function init() {
     });
 
     socket.on("initial_state", (data) => {
-        console.log("initial_state", data);
+        console.log("initial_state");
 
         selfSocketId = data.clientId;
 
@@ -93,7 +107,7 @@ function init() {
     });
 
     socket.on("client_new", (data) => {
-        console.log("client_new", data);
+        console.log("client_new");
 
         if (selfSocketId !== data.clientId) {
             world.addClient(data.clientId, data.username);
@@ -471,8 +485,8 @@ function addScreenSharePeerConnectionForClient(key) {
 function closePeerConnection(key) {
     console.log("closePeerConnection");
 
-    world.removeAllClientVideo();
-    world.removeAllClientAudio();
+    world.removeVideoForClient(data.clientId);
+    world.removeAudioForClient(data.clientId);
 
     if (world.clients[key].peerConnection) {
         world.clients[key].peerConnection.ontrack = null;
@@ -492,7 +506,7 @@ function closePeerConnection(key) {
 function closeShareScreenPeerConnection(key) {
     console.log("closeShareScreenPeerConnection");
 
-    world.removeAllClientScreens(selfSocketId);
+    world.removeScreenShareForClient(data.clientId);
 
     if (world.clients[key].shareScreenPeerConnection) {
         world.clients[key].shareScreenPeerConnection.ontrack = null;
@@ -593,6 +607,27 @@ function callConnect() {
 
         return false;
     }
+
+    addPersonButton.onclick = () => {
+        navigator.clipboard.writeText(window.location.href)
+            .then(value => {
+                showToast("Link copied to clipboard!!");
+            })
+            .catch(reason => {
+                console.log("Couldn't copy link: " + reason);
+            });
+    }
+}
+
+function showToast(message) {
+    let x = document.getElementById("snackbar");
+
+    x.className = "show";
+    x.textContent = message;
+
+    setTimeout(function () {
+        x.className = x.className.replace("show", "");
+    }, 3000);
 }
 
 function listMessage(author, message) {

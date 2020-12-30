@@ -8,8 +8,10 @@
 <canvas id="c"></canvas>
 <div id="overlay">
     <form id="overlayForm">
+        <label class="overlayFormLabel" for="usernameInput">Username:</label>
         <input class="overlayFormTextInput" id="usernameInput" name="username" placeholder="Username" type="text">
         <p><br></p>
+        <label class="overlayFormLabel" for="chatroomInput">Room Name:</label>
         <input class="overlayFormTextInput" id="chatroomInput" name="chatroom" placeholder="Room Name" type="text">
         <p><br></p>
         <button id="startButton" type="submit">Join</button>
@@ -20,6 +22,7 @@
 </div>
 <div id="conferenceOptions">
     <button class="optionsButton" id="disconnectCall">Leave</button>
+    <img alt="Add a Person" class="optionsImageButton" id="addPerson" src="resources/person_add.svg">
     <img alt="Toggle Screen Share" class="optionsImageButton" id="shareScreen" src="resources/present_to_all.svg">
 </div>
 <div id="streamOptions">
@@ -36,5 +39,6 @@
         </form>
     </div>
 </div>
+<div id="snackbar">Some text some message..</div>
 </body>
 </html>
