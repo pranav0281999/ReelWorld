@@ -6,6 +6,7 @@ const usernameInput = document.getElementById('usernameInput');
 const chatroomInput = document.getElementById('chatroomInput');
 const overlayForm = document.getElementById('overlayForm');
 const shareScreenButton = document.getElementById("shareScreen");
+const addPersonButton = document.getElementById("addPerson");
 const disconnectCallButton = document.getElementById("disconnectCall");
 const toggleAudioButton = document.getElementById("toggleAudio");
 const toggleVideoButton = document.getElementById("toggleVideo");
@@ -606,6 +607,27 @@ function callConnect() {
 
         return false;
     }
+
+    addPersonButton.onclick = () => {
+        navigator.clipboard.writeText(window.location.href)
+            .then(value => {
+                showToast("Link copied to clipboard!!");
+            })
+            .catch(reason => {
+                console.log("Couldn't copy link: " + reason);
+            });
+    }
+}
+
+function showToast(message) {
+    let x = document.getElementById("snackbar");
+
+    x.className = "show";
+    x.textContent = message;
+
+    setTimeout(function () {
+        x.className = x.className.replace("show", "");
+    }, 3000);
 }
 
 function listMessage(author, message) {
