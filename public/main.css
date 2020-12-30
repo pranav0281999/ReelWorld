@@ -170,3 +170,8 @@ textarea {
 .overlayFormTextInput {
     height: 3em;
 }
+
+.overlayFormLabel {
+    color: white;
+    width: 100%
+}

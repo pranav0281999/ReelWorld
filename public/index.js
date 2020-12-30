@@ -26,6 +26,15 @@ let selfSocketId = null;
 let audioEnabled = false, videoEnabled = false, screenShareEnabled = false;
 let currentVideoElement = null;
 
+let urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has("roomname")) {
+    const roomnameParam = urlParams.get("roomname").trim();
+
+    if (roomnameParam !== "") {
+        chatroomInput.value = roomnameParam;
+    }
+}
+
 overlayForm.onsubmit = () => {
     const name = usernameInput.value;
     const room = chatroomInput.value;
@@ -36,6 +45,10 @@ overlayForm.onsubmit = () => {
 
         usernameInput.value = "";
         chatroomInput.value = "";
+
+        const url = new URL(window.location);
+        url.searchParams.set('roomname', chatRoom);
+        window.history.pushState({}, '', url);
 
         init();
     }
@@ -70,7 +83,7 @@ function init() {
     });
 
     socket.on("initial_state", (data) => {
-        console.log("initial_state", data);
+        console.log("initial_state");
 
         selfSocketId = data.clientId;
 
@@ -93,7 +106,7 @@ function init() {
     });
 
     socket.on("client_new", (data) => {
-        console.log("client_new", data);
+        console.log("client_new");
 
         if (selfSocketId !== data.clientId) {
             world.addClient(data.clientId, data.username);
