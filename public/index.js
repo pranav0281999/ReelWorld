@@ -485,8 +485,8 @@ function addScreenSharePeerConnectionForClient(key) {
 function closePeerConnection(key) {
     console.log("closePeerConnection");
 
-    world.removeAllClientVideo();
-    world.removeAllClientAudio();
+    world.removeVideoForClient(data.clientId);
+    world.removeAudioForClient(data.clientId);
 
     if (world.clients[key].peerConnection) {
         world.clients[key].peerConnection.ontrack = null;
@@ -506,7 +506,7 @@ function closePeerConnection(key) {
 function closeShareScreenPeerConnection(key) {
     console.log("closeShareScreenPeerConnection");
 
-    world.removeAllClientScreens(selfSocketId);
+    world.removeScreenShareForClient(data.clientId);
 
     if (world.clients[key].shareScreenPeerConnection) {
         world.clients[key].shareScreenPeerConnection.ontrack = null;
