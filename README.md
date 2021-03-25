@@ -22,4 +22,5 @@ Recordings:
 
 ![Screenshot 2](sample/image2.png)
 
+Note: Faces below are live videos. I should have waved my hands to make it more understandable.
 ![Screenshot 3](sample/sample.gif)
